@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">AcoustikIQ</string>
+    <string name="menu_option1">Events</string>
+    <string name="menu_option2">Spectrum RTA</string>
+    <string name="menu_option3">Level Meter</string>
+    <string name="menu_option4">Phase Analyzer</string>
+    <string name="menu_option5">EQ Recommendation</string>
+    <string name="menu_option6">Settings</string>
+    <string name="menu_option7">Quit</string>
+    <string name="menu_option8"></string>
+    <string name="menu_option9"></string>
+    <string name="menu_option10">Salir</string>
 </resources>
