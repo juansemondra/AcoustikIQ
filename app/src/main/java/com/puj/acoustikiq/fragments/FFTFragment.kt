@@ -89,34 +89,21 @@ class FFTFragment : Fragment() {
             while (true) {
                 val readSize = audioRecord.read(audioBuffer, 0, bufferSize)
                 if (readSize > 0) {
-                    // Adjust the length to the next power of 2
+
                     val adjustedAudioBuffer = adjustToPowerOf2(audioBuffer, readSize)
                     val complexData = adjustedAudioBuffer.map { Complex(it.toDouble(), 0.0) }.toTypedArray()
 
                     val fftResult = fft(complexData)
 
+                    val frequencies = calculateFrequencies(fftResult.size, sampleRate)
+                    val magnitudesInDb = calculateMagnitudesInDb(fftResult)
+
                     activity.runOnUiThread {
-                        updateGraph(fftResult)
+                        updateGraph(frequencies, magnitudesInDb)
                     }
                 }
             }
         }.start()
-    }
-
-    private fun adjustToPowerOf2(buffer: ShortArray, length: Int): ShortArray {
-        // Find the next power of 2
-        var powerOf2Length = 1
-        while (powerOf2Length < length) {
-            powerOf2Length *= 2
-        }
-
-        // Create a new buffer with the size of the next power of 2
-        val adjustedBuffer = ShortArray(powerOf2Length)
-        // Copy the original data to the new buffer
-        System.arraycopy(buffer, 0, adjustedBuffer, 0, length)
-
-        // The rest of the buffer will be filled with zeros
-        return adjustedBuffer
     }
 
     private fun stopRecording() {
@@ -143,14 +130,46 @@ class FFTFragment : Fragment() {
         return result
     }
 
-    private fun updateGraph(fftResult: Array<Complex>) {
-        val series = LineGraphSeries<DataPoint>()
-        for (i in fftResult.indices) {
+    private fun calculateFrequencies(fftSize: Int, sampleRate: Int): DoubleArray {
+        val frequencies = DoubleArray(fftSize / 2)
+        for (i in frequencies.indices) {
+            frequencies[i] = i.toDouble() * sampleRate / fftSize
+        }
+        return frequencies
+    }
+
+    private fun calculateMagnitudesInDb(fftResult: Array<Complex>): DoubleArray {
+        val magnitudesInDb = DoubleArray(fftResult.size / 2)
+        val maxMagnitude = fftResult.maxOf { it.magnitude() }
+        for (i in magnitudesInDb.indices) {
             val magnitude = fftResult[i].magnitude()
-            series.appendData(DataPoint(i.toDouble(), magnitude), true, fftResult.size)
+            magnitudesInDb[i] = 20 * kotlin.math.log10(magnitude / maxMagnitude)
+        }
+        return magnitudesInDb
+    }
+
+    private fun updateGraph(frequencies: DoubleArray, magnitudesInDb: DoubleArray) {
+        val series = LineGraphSeries<DataPoint>()
+        for (i in frequencies.indices) {
+            series.appendData(DataPoint(frequencies[i], magnitudesInDb[i]), true, frequencies.size)
         }
         graph.removeAllSeries()
         graph.addSeries(series)
+
+        graph.gridLabelRenderer.horizontalAxisTitle = "Frequency (Hz)"
+        graph.gridLabelRenderer.verticalAxisTitle = "Amplitude (dBFS)"
+    }
+
+    private fun adjustToPowerOf2(buffer: ShortArray, length: Int): ShortArray {
+        var powerOf2Length = 1
+        while (powerOf2Length < length) {
+            powerOf2Length *= 2
+        }
+
+        val adjustedBuffer = ShortArray(powerOf2Length)
+        System.arraycopy(buffer, 0, adjustedBuffer, 0, length)
+        
+        return adjustedBuffer
     }
 
     data class Complex(val real: Double, val imag: Double) {
