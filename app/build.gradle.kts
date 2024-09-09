@@ -56,7 +56,10 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.graphview)
 
+    implementation(libs.jtransforms)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
 }

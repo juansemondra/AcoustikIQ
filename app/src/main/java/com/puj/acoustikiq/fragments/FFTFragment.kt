@@ -22,8 +22,8 @@ import kotlin.math.sin
 
 class FFTFragment : Fragment() {
 
-    private var fft_binding: FragmentFftBinding? = null
-    private val binding get() = fft_binding!!
+    private var fftBinding: FragmentFftBinding? = null
+    private val binding get() = fftBinding!!
 
     private lateinit var graph: GraphView
     private lateinit var audioRecord: AudioRecord
@@ -39,7 +39,7 @@ class FFTFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        fft_binding = FragmentFftBinding.inflate(inflater, container, false)
+        fftBinding = FragmentFftBinding.inflate(inflater, container, false)
         graph = binding.graph
         return binding.root
     }
@@ -56,23 +56,15 @@ class FFTFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        fft_binding = null
+        fftBinding = null
     }
 
     private fun startRecording() {
         val context = requireContext()
         val activity = requireActivity()
 
-        if (ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                activity,
-                arrayOf(android.Manifest.permission.RECORD_AUDIO),
-                REQUEST_CODE_MIC_PERMISSION
-            )
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_CODE_MIC_PERMISSION)
         }
 
         audioRecord = AudioRecord(
@@ -168,7 +160,7 @@ class FFTFragment : Fragment() {
 
         val adjustedBuffer = ShortArray(powerOf2Length)
         System.arraycopy(buffer, 0, adjustedBuffer, 0, length)
-        
+
         return adjustedBuffer
     }
 

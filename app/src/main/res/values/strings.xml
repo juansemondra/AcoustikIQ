@@ -7,7 +7,8 @@
     <string name="menu_option5">EQ Recommendation</string>
     <string name="menu_option6">Settings</string>
     <string name="menu_option7">Quit</string>
-    <string name="menu_option8"></string>
-    <string name="menu_option9"></string>
+    <string name="menu_option8">Magnitud</string>
+    <string name="menu_option9">B</string>
     <string name="menu_option10">Salir</string>
+    <string name="db_tag">0.00dB</string>
 </resources>

@@ -41,10 +41,17 @@ class MainActivity : AppCompatActivity() {
             println("BUTTON 2")
         }
         windowBinding.button3.setOnClickListener{
+            val intentButton3 = Intent(this, LevelMeterActivity::class.java)
+            startActivity(intentButton3)
             println("BUTTON 3")
         }
         windowBinding.button4.setOnClickListener{
+            val intentButton4 = Intent(this, PhaseAnalyzerActivity::class.java)
+            startActivity(intentButton4)
             println("BUTTON 4")
+        }
+        windowBinding.button8.setOnClickListener{
+            println("BUTTON 8")
         }
         windowBinding.button5.setOnClickListener{
             println("BUTTON 5")
@@ -54,6 +61,7 @@ class MainActivity : AppCompatActivity() {
         }
         windowBinding.button7.setOnClickListener{
             println("BUTTON 7")
+            finishAffinity()
         }
 
     }

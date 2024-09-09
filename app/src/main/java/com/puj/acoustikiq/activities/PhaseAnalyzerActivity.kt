@@ -8,18 +8,18 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.puj.acoustikiq.R
 import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PERMISSION
-import com.puj.acoustikiq.databinding.ActivitySpectrumAnalysisBinding
-import com.puj.acoustikiq.fragments.FFTFragment
+import com.puj.acoustikiq.databinding.ActivityPhaseAnalyzerBinding
+import com.puj.acoustikiq.fragments.PhaseAnalyzerFragment
 
-class SpectrumAnalysisActivity : AppCompatActivity() {
+class PhaseAnalyzerActivity : AppCompatActivity() {
 
-    private lateinit var spectrumBinding: ActivitySpectrumAnalysisBinding
+    private lateinit var phaseAnalyzerBinding: ActivityPhaseAnalyzerBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        spectrumBinding = ActivitySpectrumAnalysisBinding.inflate(layoutInflater)
-        setContentView(spectrumBinding.root)
+        phaseAnalyzerBinding = ActivityPhaseAnalyzerBinding.inflate(layoutInflater)
+        setContentView(phaseAnalyzerBinding.root)
 
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_CODE_MIC_PERMISSION)
@@ -27,7 +27,7 @@ class SpectrumAnalysisActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(R.id.spectrum_analysis_fragment_container, FFTFragment())
+                .replace(R.id.phase_analyzer_fragment_container, PhaseAnalyzerFragment())
                 .commit()
         }
     }
