@@ -1,5 +1,6 @@
 package com.puj.acoustikiq.activities
 
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
@@ -29,6 +30,11 @@ class PhaseAnalyzerActivity : AppCompatActivity() {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.phase_analyzer_fragment_container, PhaseAnalyzerFragment())
                 .commit()
+        }
+
+        phaseAnalyzerBinding.backButton.setOnClickListener(){
+            val backIntent = Intent(this, MainActivity::class.java)
+            startActivity(backIntent)
         }
     }
 

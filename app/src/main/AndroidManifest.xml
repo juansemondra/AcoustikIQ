@@ -20,6 +20,8 @@
             android:name=".activities.LevelMeterActivity"/>
         <activity
             android:name=".activities.PhaseAnalyzerActivity"/>
+        <activity
+            android:name=".activities.MagnitudeActivity"/>
 
         <activity
             android:name=".activities.MainActivity"

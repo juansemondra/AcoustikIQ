@@ -1,16 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-android:layout_width="match_parent"
-android:layout_height="match_parent"
-android:padding="16dp">
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:padding="16dp">
 
-<TextView
-    android:id="@+id/decibel_text"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="@string/db_tag"
-    android:textSize="32sp"
-    android:textStyle="bold"
-    android:layout_gravity="center" />
+    <!-- Decibel Level Display -->
+    <TextView
+        android:id="@+id/decibel_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0.00 dB"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:gravity="center" />
 
-</FrameLayout>
+    <ProgressBar
+        android:id="@+id/integrated_loudness_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="16dp"
+        android:max="100"
+        android:progress="50"
+        android:progressTint="@color/md_theme_tertiary"
+        app:layout_constraintTop_toBottomOf="@id/decibel_text"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_percent="0.8"/>
+
+    <ProgressBar
+        android:id="@+id/rms_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="16dp"
+        android:max="100"
+        android:progress="50"
+        android:progressTint="@color/md_theme_tertiary_mediumContrast"
+        app:layout_constraintTop_toBottomOf="@id/integrated_loudness_bar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_percent="0.8"/>
+
+    <TextView
+        android:id="@+id/warning_box"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="LIMIT EXCEEDED"
+        android:textColor="@color/md_theme_error"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/rms_bar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:gravity="center"
+        android:padding="16dp"
+        android:background="@color/md_theme_error"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

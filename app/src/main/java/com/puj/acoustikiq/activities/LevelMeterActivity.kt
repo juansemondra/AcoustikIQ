@@ -1,5 +1,6 @@
 package com.puj.acoustikiq.activities
 
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
@@ -29,6 +30,11 @@ class LevelMeterActivity : AppCompatActivity() {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.level_meter_fragment_container, LevelMeterFragment())
                 .commit()
+        }
+
+        levelMeterBinding.backButton.setOnClickListener(){
+            val intentBack = Intent(this, MainActivity::class.java)
+            startActivity(intentBack)
         }
     }
 

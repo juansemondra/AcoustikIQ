@@ -9,18 +9,18 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.puj.acoustikiq.R
 import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PERMISSION
-import com.puj.acoustikiq.databinding.ActivitySpectrumAnalysisBinding
-import com.puj.acoustikiq.fragments.FFTFragment
+import com.puj.acoustikiq.databinding.ActivityMagnitudeBinding
+import com.puj.acoustikiq.fragments.MagnitudeFragment
 
-class SpectrumAnalysisActivity : AppCompatActivity() {
+class MagnitudeActivity : AppCompatActivity()  {
 
-    private lateinit var spectrumBinding: ActivitySpectrumAnalysisBinding
+    private lateinit var magnitudeBinding: ActivityMagnitudeBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        spectrumBinding = ActivitySpectrumAnalysisBinding.inflate(layoutInflater)
-        setContentView(spectrumBinding.root)
+        magnitudeBinding = ActivityMagnitudeBinding.inflate(layoutInflater)
+        setContentView(magnitudeBinding.root)
 
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_CODE_MIC_PERMISSION)
@@ -28,13 +28,13 @@ class SpectrumAnalysisActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(R.id.spectrum_analysis_fragment_container, FFTFragment())
+                .replace(R.id.magnitude_analyzer_fragment_container, MagnitudeFragment())
                 .commit()
         }
 
-        spectrumBinding.backButton.setOnClickListener(){
-            val backIntent = Intent(this, MainActivity::class.java)
-            startActivity(backIntent)
+        magnitudeBinding.backButton.setOnClickListener(){
+            val intentBack = Intent(this, MainActivity::class.java)
+            startActivity(intentBack)
         }
     }
 
@@ -52,4 +52,5 @@ class SpectrumAnalysisActivity : AppCompatActivity() {
             }
         }
     }
+
 }

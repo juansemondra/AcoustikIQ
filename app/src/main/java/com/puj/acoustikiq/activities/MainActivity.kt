@@ -51,6 +51,8 @@ class MainActivity : AppCompatActivity() {
             println("BUTTON 4")
         }
         windowBinding.button8.setOnClickListener{
+            val intentButton8 = Intent(this, MagnitudeActivity::class.java)
+            startActivity(intentButton8)
             println("BUTTON 8")
         }
         windowBinding.button5.setOnClickListener{

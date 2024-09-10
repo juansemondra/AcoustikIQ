@@ -11,4 +11,5 @@
     <string name="menu_option9">B</string>
     <string name="menu_option10">Salir</string>
     <string name="db_tag">0.00dB</string>
+    <string name="back_button_desc">Back</string>
 </resources>

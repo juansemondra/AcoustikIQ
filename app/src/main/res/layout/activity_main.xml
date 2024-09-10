@@ -7,21 +7,43 @@
     tools:context=".activities.MainActivity">
 
     <LinearLayout
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/md_theme_primary"
+        android:padding="16dp"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/app_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textColor="@color/md_theme_onPrimary"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/menu_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintTop_toTopOf="parent"
+        android:gravity="center"
+        android:padding="16dp"
+        app:layout_constraintTop_toBottomOf="@id/top_bar"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:padding="16dp">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <Button
             android:id="@+id/button1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/menu_option1"
+            android:text="Events"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/md_theme_primary"
             android:textColor="@color/md_theme_onPrimary" />
@@ -30,7 +52,7 @@
             android:id="@+id/button2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/menu_option2"
+            android:text="Spectrum RTA"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/md_theme_primary"
             android:textColor="@color/md_theme_onPrimary" />
@@ -39,7 +61,7 @@
             android:id="@+id/button3"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/menu_option3"
+            android:text="Level Meter"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/md_theme_primary"
             android:textColor="@color/md_theme_onPrimary" />
@@ -48,7 +70,7 @@
             android:id="@+id/button4"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/menu_option4"
+            android:text="Phase Analyzer"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/md_theme_primary"
             android:textColor="@color/md_theme_onPrimary" />
@@ -57,7 +79,7 @@
             android:id="@+id/button8"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/menu_option8"
+            android:text="Magnitude"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/md_theme_primary"
             android:textColor="@color/md_theme_onPrimary" />
@@ -66,7 +88,7 @@
             android:id="@+id/button5"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/menu_option5"
+            android:text="EQ Recommendations"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/md_theme_primary"
             android:textColor="@color/md_theme_onPrimary" />
@@ -75,7 +97,7 @@
             android:id="@+id/button6"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/menu_option6"
+            android:text="Settings"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/md_theme_primary"
             android:textColor="@color/md_theme_onPrimary" />
@@ -84,7 +106,7 @@
             android:id="@+id/button7"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/menu_option7"
+            android:text="Quit"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/md_theme_primary"
             android:textColor="@color/md_theme_onPrimary" />

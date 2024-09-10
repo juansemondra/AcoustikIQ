@@ -13,6 +13,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.puj.acoustikiq.databinding.FragmentLevelMeterBinding
+import kotlin.math.log10
 
 class LevelMeterFragment : Fragment() {
 
@@ -65,12 +66,8 @@ class LevelMeterFragment : Fragment() {
     private fun startRecording() {
         val context = requireContext()
 
-        if (ContextCompat.checkSelfPermission(
-                context, android.Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                requireActivity(), arrayOf(android.Manifest.permission.RECORD_AUDIO), 200
-            )
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(requireActivity(), arrayOf(android.Manifest.permission.RECORD_AUDIO), 200)
             return
         }
 
@@ -92,10 +89,10 @@ class LevelMeterFragment : Fragment() {
                     val rms = calculateRms(audioBuffer, readSize)
                     val decibels = calculateDecibels(rms)
 
-                    // Check if the fragment's view still exists
+                    // Update UI on the main thread
                     binding?.let {
                         activity?.runOnUiThread {
-                            binding?.decibelText?.text = String.format("%.2f dB", decibels)
+                            updateUI(decibels, rms)
                         }
                     }
                 }
@@ -111,6 +108,22 @@ class LevelMeterFragment : Fragment() {
         }
     }
 
+    private fun updateUI(decibels: Double, rms: Double) {
+        val rmsPercent = ((rms / Short.MAX_VALUE) * 100).toInt()
+
+        binding?.decibelText?.text = String.format("%.2f dB", decibels)
+
+        binding?.rmsBar?.progress = rmsPercent
+
+        binding?.integratedLoudnessBar?.progress = rmsPercent
+
+        if (decibels >= 0) {
+            binding?.warningBox?.visibility = View.VISIBLE
+        } else {
+            binding?.warningBox?.visibility = View.GONE
+        }
+    }
+
     private fun calculateRms(buffer: ShortArray, size: Int): Double {
         var sum: Long = 0
         for (i in 0 until size) {
@@ -120,6 +133,6 @@ class LevelMeterFragment : Fragment() {
     }
 
     private fun calculateDecibels(rms: Double): Double {
-        return 20 * kotlin.math.log10(rms / Short.MAX_VALUE)
+        return 20 * log10(rms / Short.MAX_VALUE)
     }
 }
