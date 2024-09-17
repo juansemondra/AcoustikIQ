@@ -1,0 +1,12 @@
+/* start Pixel 8 Pro css values*/
+body.androidpixel8pro #jim-mobile { position:relative; top:0px; left:0px; width:482px; height:1039px; margin:auto; }
+body.androidpixel8pro #jim-case { background-image: url("../../../../../images/mobile/android/android12/pixel8pro@2x.png"); height:1039px; width:482px; background-size:100% auto; z-index:100; /*must be over keyboards and comment bubbles*/ position:absolute; pointer-events:none; }
+body.androidpixel8pro #jim-mobile #simulation { position: relative; height: 100%; overflow:hidden; }
+body.androidpixel8pro #jim-mobile .ui-page { overflow:hidden; }
+
+/* orientation values */
+body.androidpixel8pro #jim-mobile.landscape { height:482px; width:1039px; }
+body.androidpixel8pro #jim-case.portrait { transform:rotate(0deg); transform-origin:auto; }
+body.androidpixel8pro #jim-case.landscape { top:7px; left:0px; transform:rotate(-90deg); transform-origin:56% 23% 0; }
+body.androidpixel8pro #jim-container.portrait { position: absolute; top: 21px; left: 13.5px; width: 448px; height: 997px; }
+body.androidpixel8pro #jim-container.landscape { position: absolute; top: 24.5px; left: 22px; width: 997px; height: 448px; }
