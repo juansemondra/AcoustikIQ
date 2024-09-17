@@ -16,9 +16,8 @@ import com.jjoe64.graphview.series.LineGraphSeries
 import com.jjoe64.graphview.series.DataPoint
 import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PERMISSION
 import com.puj.acoustikiq.databinding.FragmentFftBinding
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
+import kotlin.math.*
+import java.util.LinkedList
 
 class FFTFragment : Fragment() {
 
@@ -35,13 +34,48 @@ class FFTFragment : Fragment() {
     )
     private val audioBuffer = ShortArray(bufferSize)
 
+    private val fftHistory = LinkedList<DoubleArray>()
+    private val historyDurationMs = 200L
+    private var lastUpdateTime = System.currentTimeMillis()
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         fftBinding = FragmentFftBinding.inflate(inflater, container, false)
         graph = binding.graph
+
+        setupGraph()
         return binding.root
+    }
+
+    private fun setupGraph() {
+        graph.viewport.isScalable = true
+        graph.viewport.isScrollable = true
+        graph.viewport.setMinY(-90.0)
+        graph.viewport.setMaxY(0.0)
+        graph.viewport.isYAxisBoundsManual = true
+
+        graph.viewport.setMinX(log10(20.0))
+        graph.viewport.setMaxX(log10(20000.0))
+        graph.viewport.isXAxisBoundsManual = true
+
+        graph.gridLabelRenderer.labelFormatter = CustomLogarithmicLabelFormatter()
+        graph.gridLabelRenderer.horizontalAxisTitle = "Frequency (Hz)"
+        graph.gridLabelRenderer.verticalAxisTitle = "Magnitude Difference (dB)"
+    }
+
+    class CustomLogarithmicLabelFormatter : com.jjoe64.graphview.DefaultLabelFormatter() {
+        override fun formatLabel(value: Double, isValueX: Boolean): String {
+            if (isValueX) {
+                val realValue = 10.0.pow(value)
+                return when {
+                    realValue >= 1000 -> "${(realValue / 1000).toInt()}k"
+                    else -> realValue.toInt().toString()
+                }
+            }
+            return super.formatLabel(value, isValueX)
+        }
     }
 
     override fun onResume() {
@@ -81,17 +115,19 @@ class FFTFragment : Fragment() {
             while (true) {
                 val readSize = audioRecord.read(audioBuffer, 0, bufferSize)
                 if (readSize > 0) {
-
                     val adjustedAudioBuffer = adjustToPowerOf2(audioBuffer, readSize)
                     val complexData = adjustedAudioBuffer.map { Complex(it.toDouble(), 0.0) }.toTypedArray()
 
                     val fftResult = fft(complexData)
 
-                    val frequencies = calculateFrequencies(fftResult.size, sampleRate)
                     val magnitudesInDb = calculateMagnitudesInDb(fftResult)
+                    updateFftHistory(magnitudesInDb)  // Store and manage history
+
+                    val averagedMagnitudes = averageFftHistory()  // Compute the average
+                    val frequencies = calculateFrequencies(fftResult.size, sampleRate)
 
                     activity.runOnUiThread {
-                        updateGraph(frequencies, magnitudesInDb)
+                        updateGraph(frequencies, averagedMagnitudes)
                     }
                 }
             }
@@ -105,7 +141,6 @@ class FFTFragment : Fragment() {
 
     private fun fft(input: Array<Complex>): Array<Complex> {
         val n = input.size
-
         if (n == 1) return arrayOf(input[0])
 
         if (n % 2 != 0) throw IllegalArgumentException("Input array length must be a power of 2")
@@ -140,16 +175,39 @@ class FFTFragment : Fragment() {
         return magnitudesInDb
     }
 
+    private fun updateFftHistory(magnitudes: DoubleArray) {
+        val currentTime = System.currentTimeMillis()
+
+        fftHistory.add(magnitudes)
+
+        while (fftHistory.size * 1000L / sampleRate > historyDurationMs) {
+            fftHistory.removeFirst()
+        }
+
+        lastUpdateTime = currentTime
+    }
+
+    private fun averageFftHistory(): DoubleArray {
+        val averagedMagnitudes = DoubleArray(fftHistory.first().size)
+        for (i in averagedMagnitudes.indices) {
+            var sum = 0.0
+            for (fft in fftHistory) {
+                sum += fft[i]
+            }
+            averagedMagnitudes[i] = sum / fftHistory.size
+        }
+        return averagedMagnitudes
+    }
+
     private fun updateGraph(frequencies: DoubleArray, magnitudesInDb: DoubleArray) {
         val series = LineGraphSeries<DataPoint>()
         for (i in frequencies.indices) {
-            series.appendData(DataPoint(frequencies[i], magnitudesInDb[i]), true, frequencies.size)
+            if (frequencies[i] in 20.0..20000.0) {
+                series.appendData(DataPoint(log10(frequencies[i]), magnitudesInDb[i]), true, frequencies.size)
+            }
         }
         graph.removeAllSeries()
         graph.addSeries(series)
-
-        graph.gridLabelRenderer.horizontalAxisTitle = "Frequency (Hz)"
-        graph.gridLabelRenderer.verticalAxisTitle = "Amplitude (dBFS)"
     }
 
     private fun adjustToPowerOf2(buffer: ShortArray, length: Int): ShortArray {

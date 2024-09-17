@@ -6,19 +6,21 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PERMISSION
 import com.puj.acoustikiq.databinding.FragmentLevelMeterBinding
 import kotlin.math.log10
 
 class LevelMeterFragment : Fragment() {
 
     private var levelMeterBinding: FragmentLevelMeterBinding? = null
-    private val binding get() = levelMeterBinding
+    private val binding get() = levelMeterBinding!!
 
     private lateinit var audioRecord: AudioRecord
     private val sampleRate = 44100
@@ -30,13 +32,14 @@ class LevelMeterFragment : Fragment() {
     private val audioBuffer = ShortArray(bufferSize)
 
     private var isRecording = false
+    private var integratedLoudness = 0.0
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         levelMeterBinding = FragmentLevelMeterBinding.inflate(inflater, container, false)
-        return binding!!.root
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -65,9 +68,10 @@ class LevelMeterFragment : Fragment() {
     @SuppressLint("DefaultLocale")
     private fun startRecording() {
         val context = requireContext()
+        val activity = requireActivity()
 
         if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(requireActivity(), arrayOf(android.Manifest.permission.RECORD_AUDIO), 200)
+            ActivityCompat.requestPermissions(activity, arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_CODE_MIC_PERMISSION)
             return
         }
 
@@ -79,22 +83,40 @@ class LevelMeterFragment : Fragment() {
             bufferSize
         )
 
+        if (audioRecord.state == AudioRecord.STATE_UNINITIALIZED) {
+            Log.e("LevelMeterFragment", "AudioRecord initialization failed")
+            return
+        }
+
         audioRecord.startRecording()
         isRecording = true
 
         Thread {
             while (isRecording) {
                 val readSize = audioRecord.read(audioBuffer, 0, bufferSize)
-                if (readSize > 0) {
-                    val rms = calculateRms(audioBuffer, readSize)
-                    val decibels = calculateDecibels(rms)
 
-                    // Update UI on the main thread
-                    binding?.let {
-                        activity?.runOnUiThread {
-                            updateUI(decibels, rms)
-                        }
+                if (readSize == 0) {
+                    Log.e("LevelMeterFragment", "AudioRecord.read() returned 0 (no data)")
+                    continue
+                }
+
+                if (readSize < 0) {
+                    Log.e("LevelMeterFragment", "AudioRecord.read() failed with error code: $readSize")
+                    continue
+                }
+
+                val rms = calculateRms(audioBuffer, readSize)
+                val decibels = calculateDecibels(rms)
+
+                integratedLoudness = calculateIntegratedLoudness(rms, integratedLoudness)
+
+                if (binding != null && activity != null && isAdded) {
+                    Log.d("LevelMeterFragment", "Updating UI: $decibels dB, RMS: $rms")
+                    activity?.runOnUiThread {
+                        updateUI(decibels, integratedLoudness)
                     }
+                } else {
+                    Log.d("LevelMeterFragment", "Binding or activity is null, skipping UI update")
                 }
             }
         }.start()
@@ -108,20 +130,24 @@ class LevelMeterFragment : Fragment() {
         }
     }
 
-    private fun updateUI(decibels: Double, rms: Double) {
-        val rmsPercent = ((rms / Short.MAX_VALUE) * 100).toInt()
+    @SuppressLint("DefaultLocale")
+    private fun updateUI(decibels: Double, integratedLoudness: Double) {
+        val rmsPercent = ((decibels + 60) / 60 * 100).toInt()
 
-        binding?.decibelText?.text = String.format("%.2f dB", decibels)
-
-        binding?.rmsBar?.progress = rmsPercent
-
-        binding?.integratedLoudnessBar?.progress = rmsPercent
+        binding.decibelText.text = String.format("%.2f dB", decibels)
+        binding.rmsBar.progress = rmsPercent
+        binding.integratedLoudnessBar.progress = (integratedLoudness * 100).toInt()
 
         if (decibels >= 0) {
-            binding?.warningBox?.visibility = View.VISIBLE
+            binding.warningBox.visibility = View.VISIBLE
         } else {
-            binding?.warningBox?.visibility = View.GONE
+            binding.warningBox.visibility = View.GONE
         }
+    }
+
+    private fun calculateIntegratedLoudness(rms: Double, currentLoudness: Double): Double {
+        val alpha = 0.9  // Smoothing factor for integrating the loudness
+        return alpha * currentLoudness + (1 - alpha) * (rms / Short.MAX_VALUE)
     }
 
     private fun calculateRms(buffer: ShortArray, size: Int): Double {

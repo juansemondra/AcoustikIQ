@@ -22,7 +22,9 @@ import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PER
 import org.jtransforms.fft.DoubleFFT_1D
 import kotlin.math.log10
 import kotlin.math.PI
+import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 class MagnitudeFragment : Fragment() {
 
@@ -54,13 +56,32 @@ class MagnitudeFragment : Fragment() {
     private fun setupGraph() {
         graphView.viewport.isScalable = true
         graphView.viewport.isScrollable = true
-        graphView.viewport.setMinY(-60.0)  // Set dB range for magnitude comparison
-        graphView.viewport.setMaxY(60.0)
+        graphView.viewport.setMinY(-90.0)
+        graphView.viewport.setMaxY(0.0)
+        graphView.viewport.isYAxisBoundsManual = true
+
+        graphView.viewport.setMinX(log10(20.0))
+        graphView.viewport.setMaxX(log10(20000.0))
+        graphView.viewport.isXAxisBoundsManual = true
+
+        graphView.gridLabelRenderer.labelFormatter = CustomLogarithmicLabelFormatter()
         graphView.gridLabelRenderer.horizontalAxisTitle = "Frequency (Hz)"
         graphView.gridLabelRenderer.verticalAxisTitle = "Magnitude Difference (dB)"
     }
 
-    // Generate pink noise, play it, and compute its FFT
+    class CustomLogarithmicLabelFormatter : com.jjoe64.graphview.DefaultLabelFormatter() {
+        override fun formatLabel(value: Double, isValueX: Boolean): String {
+            if (isValueX) {
+                val realValue = 10.0.pow(value)
+                return when {
+                    realValue >= 1000 -> "${(realValue / 1000).toInt()}k"
+                    else -> realValue.toInt().toString()
+                }
+            }
+            return super.formatLabel(value, isValueX)
+        }
+    }
+
     private fun generateAndComputePinkNoiseFFT() {
         val pinkNoise = ShortArray(bufferSize)
         for (i in pinkNoise.indices) {
@@ -84,18 +105,16 @@ class MagnitudeFragment : Fragment() {
         audioTrack.play()
         audioTrack.write(pinkNoise, 0, pinkNoise.size)
 
-        // Compute the FFT for the pink noise
         pinkNoiseFFT = calculateFFT(pinkNoise)
     }
 
     private fun startRecording() {
+        val context = requireContext()
+        val activity = requireActivity()
 
-        if (context?.let { ContextCompat.checkSelfPermission(it, android.Manifest.permission.RECORD_AUDIO) } != PackageManager.PERMISSION_GRANTED) {
-            activity?.let {
-                ActivityCompat.requestPermissions(
-                    it, arrayOf(android.Manifest.permission.RECORD_AUDIO),
-                    REQUEST_CODE_MIC_PERMISSION)
-            }
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_CODE_MIC_PERMISSION)
+            return
         }
 
         audioRecord = AudioRecord(
@@ -111,13 +130,10 @@ class MagnitudeFragment : Fragment() {
             while (true) {
                 val readSize = audioRecord.read(audioBuffer, 0, bufferSize)
                 if (readSize > 0) {
-                    // Perform FFT on microphone input
-                    val micInputFFT = calculateFFT(audioBuffer)  // FFT of microphone input
+                    val micInputFFT = calculateFFT(audioBuffer)
 
-                    // Calculate magnitude difference
                     val magnitudeDifference = calculateMagnitudeDifference(pinkNoiseFFT, micInputFFT)
 
-                    // Update the graph
                     updateGraph(magnitudeDifference)
                 }
             }
@@ -143,10 +159,9 @@ class MagnitudeFragment : Fragment() {
         val magnitudeDifference = DoubleArray(pinkNoiseFFT.size / 2)
 
         for (i in magnitudeDifference.indices) {
-            val pinkNoiseMagnitude = kotlin.math.sqrt(pinkNoiseFFT[2 * i] * pinkNoiseFFT[2 * i] + pinkNoiseFFT[2 * i + 1] * pinkNoiseFFT[2 * i + 1])
-            val micInputMagnitude = kotlin.math.sqrt(micInputFFT[2 * i] * micInputFFT[2 * i] + micInputFFT[2 * i + 1] * micInputFFT[2 * i + 1])
+            val pinkNoiseMagnitude = sqrt(pinkNoiseFFT[2 * i] * pinkNoiseFFT[2 * i] + pinkNoiseFFT[2 * i + 1] * pinkNoiseFFT[2 * i + 1])
+            val micInputMagnitude = sqrt(micInputFFT[2 * i] * micInputFFT[2 * i] + micInputFFT[2 * i + 1] * micInputFFT[2 * i + 1])
 
-            // Calculate the difference in dB
             magnitudeDifference[i] = 20 * log10(micInputMagnitude / pinkNoiseMagnitude)
         }
 
@@ -158,7 +173,7 @@ class MagnitudeFragment : Fragment() {
         for (i in magnitudeData.indices) {
             val freq = i.toDouble() * sampleRate / magnitudeData.size
             if (freq >= 20 && freq <= 20000) {
-                series.appendData(DataPoint(freq, magnitudeData[i]), true, magnitudeData.size)
+                series.appendData(DataPoint(log10(freq), magnitudeData[i]), true, magnitudeData.size)
             }
         }
         activity?.runOnUiThread {
