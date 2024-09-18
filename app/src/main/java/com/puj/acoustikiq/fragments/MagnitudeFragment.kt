@@ -31,13 +31,16 @@ class MagnitudeFragment : Fragment() {
     private lateinit var graphView: GraphView
     private lateinit var audioRecord: AudioRecord
     private lateinit var audioTrack: AudioTrack
-    private lateinit var pinkNoiseFFT: DoubleArray  // FFT for pink noise
+    private lateinit var pinkNoiseFFT: DoubleArray
 
     private val sampleRate = 44100
     private val bufferSize = AudioRecord.getMinBufferSize(
         sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
     )
     private val audioBuffer = ShortArray(bufferSize)
+
+    private var bufferFlushInterval = 1000L
+    private var lastFlushTime = System.currentTimeMillis()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -135,6 +138,11 @@ class MagnitudeFragment : Fragment() {
                     val magnitudeDifference = calculateMagnitudeDifference(pinkNoiseFFT, micInputFFT)
 
                     updateGraph(magnitudeDifference)
+
+                    if (System.currentTimeMillis() - lastFlushTime >= bufferFlushInterval) {
+                        flushBuffer()
+                        lastFlushTime = System.currentTimeMillis()
+                    }
                 }
             }
         }.start()
@@ -180,6 +188,13 @@ class MagnitudeFragment : Fragment() {
             graphView.removeAllSeries()
             graphView.addSeries(series)
         }
+    }
+
+    private fun flushBuffer() {
+        for (i in audioBuffer.indices) {
+            audioBuffer[i] = 0
+        }
+        println("Buffer flushed to prevent memory issues.")
     }
 
     override fun onDestroyView() {

@@ -33,6 +33,8 @@ class LevelMeterFragment : Fragment() {
 
     private var isRecording = false
     private var integratedLoudness = 0.0
+    private var bufferFlushInterval = 1000L  // Flush buffer every second
+    private var lastFlushTime = System.currentTimeMillis()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -95,12 +97,7 @@ class LevelMeterFragment : Fragment() {
             while (isRecording) {
                 val readSize = audioRecord.read(audioBuffer, 0, bufferSize)
 
-                if (readSize == 0) {
-                    Log.e("LevelMeterFragment", "AudioRecord.read() returned 0 (no data)")
-                    continue
-                }
-
-                if (readSize < 0) {
+                if (readSize <= 0) {
                     Log.e("LevelMeterFragment", "AudioRecord.read() failed with error code: $readSize")
                     continue
                 }
@@ -110,13 +107,17 @@ class LevelMeterFragment : Fragment() {
 
                 integratedLoudness = calculateIntegratedLoudness(rms, integratedLoudness)
 
-                if (binding != null && activity != null && isAdded) {
+                if (isAdded) {
                     Log.d("LevelMeterFragment", "Updating UI: $decibels dB, RMS: $rms")
-                    activity?.runOnUiThread {
+                    activity.runOnUiThread {
                         updateUI(decibels, integratedLoudness)
                     }
-                } else {
-                    Log.d("LevelMeterFragment", "Binding or activity is null, skipping UI update")
+                }
+
+                // Check if it's time to flush the buffer
+                if (System.currentTimeMillis() - lastFlushTime >= bufferFlushInterval) {
+                    flushBuffer()
+                    lastFlushTime = System.currentTimeMillis()
                 }
             }
         }.start()
@@ -146,7 +147,7 @@ class LevelMeterFragment : Fragment() {
     }
 
     private fun calculateIntegratedLoudness(rms: Double, currentLoudness: Double): Double {
-        val alpha = 0.9  // Smoothing factor for integrating the loudness
+        val alpha = 0.9
         return alpha * currentLoudness + (1 - alpha) * (rms / Short.MAX_VALUE)
     }
 
@@ -160,5 +161,12 @@ class LevelMeterFragment : Fragment() {
 
     private fun calculateDecibels(rms: Double): Double {
         return 20 * log10(rms / Short.MAX_VALUE)
+    }
+
+    private fun flushBuffer() {
+        for (i in audioBuffer.indices) {
+            audioBuffer[i] = 0
+        }
+        Log.d("LevelMeterFragment", "Buffer flushed to prevent overflow.")
     }
 }

@@ -33,6 +33,8 @@ class MainActivity : AppCompatActivity() {
         //CODIGO PARA BOTONES MENU
 
         windowBinding.button1.setOnClickListener{
+            val intentButton1 = Intent(this, EventActivity::class.java)
+            startActivity(intentButton1)
             println("BUTTON 1")
         }
         windowBinding.button2.setOnClickListener{

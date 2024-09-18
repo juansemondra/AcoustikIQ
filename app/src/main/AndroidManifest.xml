@@ -22,6 +22,16 @@
             android:name=".activities.PhaseAnalyzerActivity"/>
         <activity
             android:name=".activities.MagnitudeActivity"/>
+        <activity
+            android:name=".activities.EventActivity"/>
+        <activity
+            android:name=".activities.EventDetailActivity"/>
+        <activity
+            android:name=".activities.StageActivity"/>
+        <activity
+            android:name=".activities.MapActivity"/>
+        <activity
+            android:name=".activities.SpeakerActivity"/>
 
         <activity
             android:name=".activities.MainActivity"

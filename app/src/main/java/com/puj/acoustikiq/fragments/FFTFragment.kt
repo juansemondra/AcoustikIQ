@@ -38,6 +38,8 @@ class FFTFragment : Fragment() {
     private val historyDurationMs = 200L
     private var lastUpdateTime = System.currentTimeMillis()
 
+    private var isRecording = false // Ensure proper thread control
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -85,11 +87,12 @@ class FFTFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        stopRecording()
+        stopRecording() // Stop recording when fragment is paused
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        stopRecording() // Ensure recording is stopped properly
         fftBinding = null
     }
 
@@ -99,6 +102,7 @@ class FFTFragment : Fragment() {
 
         if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_CODE_MIC_PERMISSION)
+            return
         }
 
         audioRecord = AudioRecord(
@@ -110,6 +114,7 @@ class FFTFragment : Fragment() {
         )
 
         audioRecord.startRecording()
+        isRecording = true
 
         Thread {
             while (true) {
@@ -119,24 +124,34 @@ class FFTFragment : Fragment() {
                     val complexData = adjustedAudioBuffer.map { Complex(it.toDouble(), 0.0) }.toTypedArray()
 
                     val fftResult = fft(complexData)
-
                     val magnitudesInDb = calculateMagnitudesInDb(fftResult)
-                    updateFftHistory(magnitudesInDb)  // Store and manage history
 
-                    val averagedMagnitudes = averageFftHistory()  // Compute the average
-                    val frequencies = calculateFrequencies(fftResult.size, sampleRate)
+                    updateFftHistory(magnitudesInDb)
 
-                    activity.runOnUiThread {
-                        updateGraph(frequencies, averagedMagnitudes)
+                    val averagedMagnitudes = averageFftHistory()
+                    if (averagedMagnitudes != null) {
+                        val frequencies = calculateFrequencies(fftResult.size, sampleRate)
+                        activity?.runOnUiThread {
+                            updateGraph(frequencies, averagedMagnitudes)
+                        }
                     }
+
+                    if (System.currentTimeMillis() - lastUpdateTime >= historyDurationMs) {
+                        fftHistory.clear()
+                    }
+                } else {
+                    println("Buffer ERROR")
                 }
             }
         }.start()
     }
 
     private fun stopRecording() {
-        audioRecord.stop()
-        audioRecord.release()
+        if (isRecording) {
+            isRecording = false
+            audioRecord.stop()
+            audioRecord.release()
+        }
     }
 
     private fun fft(input: Array<Complex>): Array<Complex> {
@@ -170,24 +185,27 @@ class FFTFragment : Fragment() {
         val maxMagnitude = fftResult.maxOf { it.magnitude() }
         for (i in magnitudesInDb.indices) {
             val magnitude = fftResult[i].magnitude()
-            magnitudesInDb[i] = 20 * kotlin.math.log10(magnitude / maxMagnitude)
+            magnitudesInDb[i] = 20 * log10(magnitude / maxMagnitude)
         }
         return magnitudesInDb
     }
 
     private fun updateFftHistory(magnitudes: DoubleArray) {
-        val currentTime = System.currentTimeMillis()
-
         fftHistory.add(magnitudes)
 
-        while (fftHistory.size * 1000L / sampleRate > historyDurationMs) {
+        // Ensure history size is within limit
+        val historyDuration = fftHistory.size * bufferSize * 1000L / sampleRate
+        while (historyDuration > historyDurationMs && fftHistory.isNotEmpty()) {
             fftHistory.removeFirst()
         }
-
-        lastUpdateTime = currentTime
     }
 
-    private fun averageFftHistory(): DoubleArray {
+    private fun averageFftHistory(): DoubleArray? {
+        if (fftHistory.isEmpty()) {
+
+            return null
+        }
+
         val averagedMagnitudes = DoubleArray(fftHistory.first().size)
         for (i in averagedMagnitudes.indices) {
             var sum = 0.0

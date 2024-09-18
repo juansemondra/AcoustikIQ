@@ -41,6 +41,10 @@ class PhaseAnalyzerFragment : Fragment() {
 
     private lateinit var pinkNoiseFFT: DoubleArray
 
+    // Buffer flush management
+    private var bufferFlushInterval = 1000L // Flush buffer every second
+    private var lastFlushTime = System.currentTimeMillis()
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -132,6 +136,11 @@ class PhaseAnalyzerFragment : Fragment() {
                     val micFFTResult = calculateFFT(audioBuffer)
                     val phaseDifference = calculatePhaseDifference(pinkNoiseFFT, micFFTResult)
                     updateGraph(phaseDifference)
+
+                    if (System.currentTimeMillis() - lastFlushTime >= bufferFlushInterval) {
+                        flushBuffer()
+                        lastFlushTime = System.currentTimeMillis()
+                    }
                 }
             }
         }.start()
@@ -189,5 +198,12 @@ class PhaseAnalyzerFragment : Fragment() {
             binding.graph.removeAllSeries()
             binding.graph.addSeries(series)
         }
+    }
+
+    private fun flushBuffer() {
+        for (i in audioBuffer.indices) {
+            audioBuffer[i] = 0
+        }
+        println("Buffer flushed to prevent memory issues.")
     }
 }
