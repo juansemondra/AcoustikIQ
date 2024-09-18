@@ -38,7 +38,7 @@ class FFTFragment : Fragment() {
     private val historyDurationMs = 200L
     private var lastUpdateTime = System.currentTimeMillis()
 
-    private var isRecording = false // Ensure proper thread control
+    private var isRecording = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -87,12 +87,12 @@ class FFTFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        stopRecording() // Stop recording when fragment is paused
+        stopRecording()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        stopRecording() // Ensure recording is stopped properly
+        stopRecording()
         fftBinding = null
     }
 
@@ -193,7 +193,6 @@ class FFTFragment : Fragment() {
     private fun updateFftHistory(magnitudes: DoubleArray) {
         fftHistory.add(magnitudes)
 
-        // Ensure history size is within limit
         val historyDuration = fftHistory.size * bufferSize * 1000L / sampleRate
         while (historyDuration > historyDurationMs && fftHistory.isNotEmpty()) {
             fftHistory.removeFirst()

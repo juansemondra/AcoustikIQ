@@ -114,7 +114,6 @@ class LevelMeterFragment : Fragment() {
                     }
                 }
 
-                // Check if it's time to flush the buffer
                 if (System.currentTimeMillis() - lastFlushTime >= bufferFlushInterval) {
                     flushBuffer()
                     lastFlushTime = System.currentTimeMillis()
