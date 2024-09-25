@@ -18,6 +18,8 @@ import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PER
 import com.puj.acoustikiq.databinding.FragmentFftBinding
 import kotlin.math.*
 import java.util.LinkedList
+import com.puj.acoustikiq.util.Complex
+import com.puj.acoustikiq.util.FFTProcessor
 
 class FFTFragment : Fragment() {
 
@@ -27,18 +29,11 @@ class FFTFragment : Fragment() {
     private lateinit var graph: GraphView
     private lateinit var audioRecord: AudioRecord
     private val sampleRate = 44100
-    private val bufferSize = AudioRecord.getMinBufferSize(
-        sampleRate,
-        AudioFormat.CHANNEL_IN_MONO,
-        AudioFormat.ENCODING_PCM_16BIT
-    )
-    private val audioBuffer = ShortArray(bufferSize)
+    private val bufferSize = 2048
+    private val fftSize = 2048
+    private var fftProcessor = FFTProcessor(fftSize)
 
-    private val fftHistory = LinkedList<DoubleArray>()
-    private val historyDurationMs = 200L
-    private var lastUpdateTime = System.currentTimeMillis()
-
-    private var isRecording = false
+    var isRecording = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -49,35 +44,6 @@ class FFTFragment : Fragment() {
 
         setupGraph()
         return binding.root
-    }
-
-    private fun setupGraph() {
-        graph.viewport.isScalable = true
-        graph.viewport.isScrollable = true
-        graph.viewport.setMinY(-90.0)
-        graph.viewport.setMaxY(0.0)
-        graph.viewport.isYAxisBoundsManual = true
-
-        graph.viewport.setMinX(log10(20.0))
-        graph.viewport.setMaxX(log10(20000.0))
-        graph.viewport.isXAxisBoundsManual = true
-
-        graph.gridLabelRenderer.labelFormatter = CustomLogarithmicLabelFormatter()
-        graph.gridLabelRenderer.horizontalAxisTitle = "Frequency (Hz)"
-        graph.gridLabelRenderer.verticalAxisTitle = "Magnitude Difference (dB)"
-    }
-
-    class CustomLogarithmicLabelFormatter : com.jjoe64.graphview.DefaultLabelFormatter() {
-        override fun formatLabel(value: Double, isValueX: Boolean): String {
-            if (isValueX) {
-                val realValue = 10.0.pow(value)
-                return when {
-                    realValue >= 1000 -> "${(realValue / 1000).toInt()}k"
-                    else -> realValue.toInt().toString()
-                }
-            }
-            return super.formatLabel(value, isValueX)
-        }
     }
 
     override fun onResume() {
@@ -113,157 +79,95 @@ class FFTFragment : Fragment() {
             bufferSize
         )
 
+        val audioBuffer = ShortArray(bufferSize)
         audioRecord.startRecording()
         isRecording = true
 
         Thread {
-            while (true) {
-                val readSize = audioRecord.read(audioBuffer, 0, bufferSize)
-                if (readSize > 0) {
-                    val adjustedAudioBuffer = adjustToPowerOf2(audioBuffer, readSize)
-                    val complexData = adjustedAudioBuffer.map { Complex(it.toDouble(), 0.0) }.toTypedArray()
+            while (isRecording) {
+                val readCount = audioRecord.read(audioBuffer, 0, bufferSize)
 
-                    val fftResult = fft(complexData)
-                    val magnitudesInDb = calculateMagnitudesInDb(fftResult)
-
-                    updateFftHistory(magnitudesInDb)
-
-                    val averagedMagnitudes = averageFftHistory()
-                    if (averagedMagnitudes != null) {
-                        val frequencies = calculateFrequencies(fftResult.size, sampleRate)
-                        activity?.runOnUiThread {
-                            updateGraph(frequencies, averagedMagnitudes)
-                        }
+                if (readCount > 0) {
+                    val complexBuffer = Array(bufferSize) { i ->
+                        Complex(audioBuffer[i].toDouble(), 0.0)
                     }
 
-                    if (System.currentTimeMillis() - lastUpdateTime >= historyDurationMs) {
-                        fftHistory.clear()
+                    val windowedSignal = fftProcessor.applyHannWindow(complexBuffer)
+                    val fftResult = fftProcessor.fft(windowedSignal)
+
+                    val magnitudes = fftProcessor.dbConverter(fftResult)
+                    val frequencies = fftProcessor.frequencyConverter(fftResult, sampleRate)
+
+                    activity.runOnUiThread {
+                        updateGraph(frequencies, magnitudes)
                     }
-                } else {
-                    println("Buffer ERROR")
+
+                    complexBuffer.fill(Complex(0.0, 0.0))
+                    audioBuffer.fill(0)
                 }
             }
+
+            audioRecord.release()
         }.start()
     }
 
+
     private fun stopRecording() {
-        if (isRecording) {
+        if (isRecording && ::audioRecord.isInitialized) {
             isRecording = false
             audioRecord.stop()
             audioRecord.release()
         }
     }
 
-    private fun fft(input: Array<Complex>): Array<Complex> {
-        val n = input.size
-        if (n == 1) return arrayOf(input[0])
+    private fun setupGraph() {
+        graph.viewport.isScalable = true
+        graph.viewport.isScrollable = true
+        graph.viewport.setMinY(-90.0)
+        graph.viewport.setMaxY(0.0)
+        graph.viewport.isYAxisBoundsManual = true
 
-        if (n % 2 != 0) throw IllegalArgumentException("Input array length must be a power of 2")
+        graph.viewport.setMinX(20.0)
+        graph.viewport.setMaxX(20000.0)
+        graph.viewport.isXAxisBoundsManual = true
 
-        val even = fft(input.filterIndexed { index, _ -> index % 2 == 0 }.toTypedArray())
-        val odd = fft(input.filterIndexed { index, _ -> index % 2 != 0 }.toTypedArray())
+        graph.gridLabelRenderer.horizontalAxisTitle = "Frequency (Hz)"
+        graph.gridLabelRenderer.verticalAxisTitle = "Magnitude (dB)"
+        graph.gridLabelRenderer.numHorizontalLabels = 5
+        graph.gridLabelRenderer.numVerticalLabels = 4
 
-        val result = Array(n) { Complex(0.0, 0.0) }
-        for (k in 0 until n / 2) {
-            val t = Complex.polar(1.0, -2.0 * PI * k / n) * odd[k]
-            result[k] = even[k] + t
-            result[k + n / 2] = even[k] - t
-        }
-        return result
-    }
-
-    private fun calculateFrequencies(fftSize: Int, sampleRate: Int): DoubleArray {
-        val frequencies = DoubleArray(fftSize / 2)
-        for (i in frequencies.indices) {
-            frequencies[i] = i.toDouble() * sampleRate / fftSize
-        }
-        return frequencies
-    }
-
-    private fun calculateMagnitudesInDb(fftResult: Array<Complex>): DoubleArray {
-        val magnitudesInDb = DoubleArray(fftResult.size / 2)
-        val maxMagnitude = fftResult.maxOf { it.magnitude() }
-        for (i in magnitudesInDb.indices) {
-            val magnitude = fftResult[i].magnitude()
-            magnitudesInDb[i] = 20 * log10(magnitude / maxMagnitude)
-        }
-        return magnitudesInDb
-    }
-
-    private fun updateFftHistory(magnitudes: DoubleArray) {
-        fftHistory.add(magnitudes)
-
-        val historyDuration = fftHistory.size * bufferSize * 1000L / sampleRate
-        while (historyDuration > historyDurationMs && fftHistory.isNotEmpty()) {
-            fftHistory.removeFirst()
-        }
-    }
-
-    private fun averageFftHistory(): DoubleArray? {
-        if (fftHistory.isEmpty()) {
-
-            return null
-        }
-
-        val averagedMagnitudes = DoubleArray(fftHistory.first().size)
-        for (i in averagedMagnitudes.indices) {
-            var sum = 0.0
-            for (fft in fftHistory) {
-                sum += fft[i]
-            }
-            averagedMagnitudes[i] = sum / fftHistory.size
-        }
-        return averagedMagnitudes
+        graph.gridLabelRenderer.labelFormatter = CustomLogarithmicLabelFormatter()
     }
 
     private fun updateGraph(frequencies: DoubleArray, magnitudesInDb: DoubleArray) {
         val series = LineGraphSeries<DataPoint>()
-        for (i in frequencies.indices) {
-            if (frequencies[i] in 20.0..20000.0) {
-                series.appendData(DataPoint(log10(frequencies[i]), magnitudesInDb[i]), true, frequencies.size)
-            }
+
+        val dataPoints = frequencies.indices
+            .map { i -> frequencies[i] to magnitudesInDb[i] }
+            .filter { it.first in 20.0..20000.0 }
+            .sortedBy { it.first }
+
+        for ((frequency, magnitude) in dataPoints) {
+            println("Frecuencia: $frequency Hz, Magnitud: $magnitude dB")
+            series.appendData(DataPoint(frequency, magnitude), true, frequencies.size)  // Sin log10
         }
+
         graph.removeAllSeries()
         graph.addSeries(series)
     }
 
-    private fun adjustToPowerOf2(buffer: ShortArray, length: Int): ShortArray {
-        var powerOf2Length = 1
-        while (powerOf2Length < length) {
-            powerOf2Length *= 2
-        }
-
-        val adjustedBuffer = ShortArray(powerOf2Length)
-        System.arraycopy(buffer, 0, adjustedBuffer, 0, length)
-
-        return adjustedBuffer
-    }
-
-    data class Complex(val real: Double, val imag: Double) {
-
-        operator fun plus(other: Complex): Complex {
-            return Complex(real + other.real, imag + other.imag)
-        }
-
-        operator fun minus(other: Complex): Complex {
-            return Complex(real - other.real, imag - other.imag)
-        }
-
-        operator fun times(other: Complex): Complex {
-            return Complex(
-                real * other.real - imag * other.imag,
-                real * other.imag + imag * other.real
-            )
-        }
-
-        fun magnitude(): Double {
-            return kotlin.math.sqrt(real * real + imag * imag)
-        }
-
-        companion object {
-            fun polar(r: Double, theta: Double): Complex {
-                return Complex(r * cos(theta), r * sin(theta))
+    class CustomLogarithmicLabelFormatter : com.jjoe64.graphview.DefaultLabelFormatter() {
+        override fun formatLabel(value: Double, isValueX: Boolean): String {
+            if (isValueX) {
+                val realValue = 10.0.pow(value)
+                return when {
+                    realValue >= 1000 -> "${(realValue / 1000).toInt()}k"
+                    else -> realValue.toInt().toString()
+                }
             }
+            return super.formatLabel(value, isValueX)
         }
     }
+
+
 }
