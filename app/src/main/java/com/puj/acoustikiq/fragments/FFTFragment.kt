@@ -11,27 +11,35 @@ import android.view.ViewGroup
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.jjoe64.graphview.GraphView
-import com.jjoe64.graphview.series.LineGraphSeries
-import com.jjoe64.graphview.series.DataPoint
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
 import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PERMISSION
 import com.puj.acoustikiq.databinding.FragmentFftBinding
-import kotlin.math.*
-import java.util.LinkedList
 import com.puj.acoustikiq.util.Complex
 import com.puj.acoustikiq.util.FFTProcessor
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import kotlin.math.log10
+import kotlin.math.pow
 
 class FFTFragment : Fragment() {
 
     private var fftBinding: FragmentFftBinding? = null
     private val binding get() = fftBinding!!
 
-    private lateinit var graph: GraphView
+    private lateinit var chart: LineChart
+    private lateinit var executorService: ExecutorService
     private lateinit var audioRecord: AudioRecord
     private val sampleRate = 44100
     private val bufferSize = 2048
     private val fftSize = 2048
     private var fftProcessor = FFTProcessor(fftSize)
+
+    private lateinit var magnitudes: DoubleArray
+    private lateinit var frequencies: DoubleArray
 
     var isRecording = false
 
@@ -40,7 +48,7 @@ class FFTFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         fftBinding = FragmentFftBinding.inflate(inflater, container, false)
-        graph = binding.graph
+        chart = binding.graph
 
         setupGraph()
         return binding.root
@@ -79,38 +87,40 @@ class FFTFragment : Fragment() {
             bufferSize
         )
 
-        val audioBuffer = ShortArray(bufferSize)
         audioRecord.startRecording()
         isRecording = true
 
-        Thread {
+        executorService = Executors.newSingleThreadExecutor()
+        executorService.execute {
+            val audioBuffer = ShortArray(bufferSize)
+            val complexBuffer = Array(bufferSize) { Complex(0.0, 0.0) }
+
             while (isRecording) {
                 val readCount = audioRecord.read(audioBuffer, 0, bufferSize)
 
                 if (readCount > 0) {
-                    val complexBuffer = Array(bufferSize) { i ->
-                        Complex(audioBuffer[i].toDouble(), 0.0)
+                    for (i in 0 until bufferSize) {
+                        complexBuffer[i].real = audioBuffer[i].toDouble()
+                        complexBuffer[i].imaginary = 0.0
                     }
 
                     val windowedSignal = fftProcessor.applyHannWindow(complexBuffer)
                     val fftResult = fftProcessor.fft(windowedSignal)
 
-                    val magnitudes = fftProcessor.dbConverter(fftResult)
-                    val frequencies = fftProcessor.frequencyConverter(fftResult, sampleRate)
+                    magnitudes = fftProcessor.dbConverter(fftResult)
+                    frequencies = fftProcessor.frequencyConverter(fftResult, sampleRate)
 
                     activity.runOnUiThread {
                         updateGraph(frequencies, magnitudes)
                     }
 
-                    complexBuffer.fill(Complex(0.0, 0.0))
                     audioBuffer.fill(0)
                 }
             }
 
             audioRecord.release()
-        }.start()
+        }
     }
-
 
     private fun stopRecording() {
         if (isRecording && ::audioRecord.isInitialized) {
@@ -118,56 +128,58 @@ class FFTFragment : Fragment() {
             audioRecord.stop()
             audioRecord.release()
         }
+        
+    }
+
+    public fun getMag(): DoubleArray {
+        return this.magnitudes
+    }
+
+    public fun getFrq(): DoubleArray {
+        return this.frequencies
     }
 
     private fun setupGraph() {
-        graph.viewport.isScalable = true
-        graph.viewport.isScrollable = true
-        graph.viewport.setMinY(-90.0)
-        graph.viewport.setMaxY(0.0)
-        graph.viewport.isYAxisBoundsManual = true
+        chart.description.isEnabled = false
 
-        graph.viewport.setMinX(20.0)
-        graph.viewport.setMaxX(20000.0)
-        graph.viewport.isXAxisBoundsManual = true
+        val xAxis = chart.xAxis
+        xAxis.position = XAxis.XAxisPosition.BOTTOM
+        xAxis.granularity = 1f
+        xAxis.setLabelCount(6, true)
+        xAxis.axisMinimum = log10(20f)
+        xAxis.axisMaximum = log10(20000f)
+        xAxis.valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                val freq = 10.0.pow(value.toDouble()).toFloat()
+                return when {
+                    freq >= 1000 -> "${(freq / 1000).toInt()}k"
+                    else -> freq.toInt().toString()
+                }
+            }
+        }
+        xAxis.labelRotationAngle = 45f
 
-        graph.gridLabelRenderer.horizontalAxisTitle = "Frequency (Hz)"
-        graph.gridLabelRenderer.verticalAxisTitle = "Magnitude (dB)"
-        graph.gridLabelRenderer.numHorizontalLabels = 5
-        graph.gridLabelRenderer.numVerticalLabels = 4
+        val yAxis = chart.axisLeft
+        yAxis.axisMinimum = -90f
+        yAxis.axisMaximum = 0f
 
-        graph.gridLabelRenderer.labelFormatter = CustomLogarithmicLabelFormatter()
+        chart.axisRight.isEnabled = false
     }
 
     private fun updateGraph(frequencies: DoubleArray, magnitudesInDb: DoubleArray) {
-        val series = LineGraphSeries<DataPoint>()
-
         val dataPoints = frequencies.indices
-            .map { i -> frequencies[i] to magnitudesInDb[i] }
-            .filter { it.first in 20.0..20000.0 }
-            .sortedBy { it.first }
+            .map { i -> Entry(log10(frequencies[i].toFloat()), magnitudesInDb[i].toFloat()) }
+            .filter { it.x in log10(20f)..log10(20000f) }
+            .sortedBy { it.x }
 
-        for ((frequency, magnitude) in dataPoints) {
-            println("Frecuencia: $frequency Hz, Magnitud: $magnitude dB")
-            series.appendData(DataPoint(frequency, magnitude), true, frequencies.size)  // Sin log10
-        }
+        val dataSet = LineDataSet(dataPoints, "Magnitudes RTA")
+        dataSet.setDrawCircles(false)
+        dataSet.setDrawValues(false)
+        dataSet.lineWidth = 2f
 
-        graph.removeAllSeries()
-        graph.addSeries(series)
+        val lineData = LineData(dataSet)
+        chart.data = lineData
+
+        chart.invalidate()
     }
-
-    class CustomLogarithmicLabelFormatter : com.jjoe64.graphview.DefaultLabelFormatter() {
-        override fun formatLabel(value: Double, isValueX: Boolean): String {
-            if (isValueX) {
-                val realValue = 10.0.pow(value)
-                return when {
-                    realValue >= 1000 -> "${(realValue / 1000).toInt()}k"
-                    else -> realValue.toInt().toString()
-                }
-            }
-            return super.formatLabel(value, isValueX)
-        }
-    }
-
-
 }

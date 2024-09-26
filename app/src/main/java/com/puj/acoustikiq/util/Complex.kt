@@ -5,7 +5,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-data class Complex(val real: Double, val imaginary: Double) {
+data class Complex(var real: Double, var imaginary: Double) {
     operator fun plus(other: Complex) = Complex(real + other.real, imaginary + other.imaginary)
     operator fun minus(other: Complex) = Complex(real - other.real, imaginary - other.imaginary)
     operator fun times(other: Complex): Complex {

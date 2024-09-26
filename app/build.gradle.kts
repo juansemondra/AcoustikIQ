@@ -1,7 +1,7 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin.android)
-}
+            alias(libs.plugins.android.application)
+            alias(libs.plugins.jetbrains.kotlin.android)
+        }
 
 android {
     namespace = "com.puj.acoustikiq"
@@ -32,6 +32,7 @@ android {
         }
     }
 
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -40,7 +41,11 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+
 }
+
+
 
 dependencies {
     implementation(libs.androidx.core.ktx) {
@@ -52,6 +57,7 @@ dependencies {
     implementation(libs.material) {
         exclude(group = "com.android.support", module = "support-compat")
     }
+    implementation(libs.mpandroidchart)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.graphview)
