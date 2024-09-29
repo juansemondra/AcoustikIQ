@@ -1,11 +1,9 @@
 package com.puj.acoustikiq.fragments
 
 import android.content.pm.PackageManager
-import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioTrack
-import android.media.AudioManager
 import android.media.MediaRecorder
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -14,102 +12,77 @@ import android.view.ViewGroup
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.jjoe64.graphview.GraphView
-import com.jjoe64.graphview.series.LineGraphSeries
-import com.jjoe64.graphview.series.DataPoint
-import com.puj.acoustikiq.R
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
 import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PERMISSION
-import org.jtransforms.fft.DoubleFFT_1D
+import com.puj.acoustikiq.databinding.FragmentMagnitudeBinding
+import com.puj.acoustikiq.util.Complex
+import com.puj.acoustikiq.util.FFTProcessor
+import com.puj.acoustikiq.util.MagnitudeComparator
+import com.puj.acoustikiq.util.PinkNoise
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlin.math.log10
-import kotlin.math.PI
 import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 class MagnitudeFragment : Fragment() {
 
-    private lateinit var graphView: GraphView
-    private lateinit var audioRecord: AudioRecord
+    private var magnitudeFragment: FragmentMagnitudeBinding? = null
+    private val binding get() = magnitudeFragment!!
+
+    private lateinit var chart: LineChart
     private lateinit var audioTrack: AudioTrack
-    private lateinit var pinkNoiseFFT: DoubleArray
+    private lateinit var audioRecord: AudioRecord
+    private lateinit var executorService: ExecutorService
 
     private val sampleRate = 44100
-    private val bufferSize = AudioRecord.getMinBufferSize(
-        sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
-    )
-    private val audioBuffer = ShortArray(bufferSize)
+    private val bufferSize = 2048
+    private val fftSize = 2048
+    private val fftProcessor = FFTProcessor(fftSize)
+    private val pinkNoiseGenerator = PinkNoise()
+    private val diffMagnitude = MagnitudeComparator()
 
-    private var bufferFlushInterval = 1000L
-    private var lastFlushTime = System.currentTimeMillis()
+    private lateinit var pinkNoise: Array<Complex>
+    private lateinit var pinkNoiseMagnitudes: DoubleArray
+    private lateinit var pinkNoiseFrequencies: DoubleArray
+    private lateinit var micMagnitudes: DoubleArray
+    private lateinit var micFrequencies: DoubleArray
+    private lateinit var magnitudeComparison: DoubleArray
+    private lateinit var pinkNoiseShort: ShortArray
+
+    private var isRecording = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.fragment_magnitude, container, false)
-        graphView = view.findViewById(R.id.magnitude_graph)
+        magnitudeFragment = FragmentMagnitudeBinding.inflate(inflater, container, false)
+        chart = binding.graph
 
         setupGraph()
-        generateAndComputePinkNoiseFFT()
+
+        return binding.root
+    }
+
+    override fun onResume() {
+        super.onResume()
         startRecording()
-
-        return view
     }
 
-    private fun setupGraph() {
-        graphView.viewport.isScalable = true
-        graphView.viewport.isScrollable = true
-        graphView.viewport.setMinY(-90.0)
-        graphView.viewport.setMaxY(0.0)
-        graphView.viewport.isYAxisBoundsManual = true
-
-        graphView.viewport.setMinX(log10(20.0))
-        graphView.viewport.setMaxX(log10(20000.0))
-        graphView.viewport.isXAxisBoundsManual = true
-
-        graphView.gridLabelRenderer.labelFormatter = CustomLogarithmicLabelFormatter()
-        graphView.gridLabelRenderer.horizontalAxisTitle = "Frequency (Hz)"
-        graphView.gridLabelRenderer.verticalAxisTitle = "Magnitude Difference (dB)"
+    override fun onPause() {
+        super.onPause()
+        stopRecording()
     }
 
-    class CustomLogarithmicLabelFormatter : com.jjoe64.graphview.DefaultLabelFormatter() {
-        override fun formatLabel(value: Double, isValueX: Boolean): String {
-            if (isValueX) {
-                val realValue = 10.0.pow(value)
-                return when {
-                    realValue >= 1000 -> "${(realValue / 1000).toInt()}k"
-                    else -> realValue.toInt().toString()
-                }
-            }
-            return super.formatLabel(value, isValueX)
-        }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        stopRecording()
+        magnitudeFragment = null
     }
 
-    private fun generateAndComputePinkNoiseFFT() {
-        val pinkNoise = ShortArray(bufferSize)
-        for (i in pinkNoise.indices) {
-            pinkNoise[i] = (sin(2 * PI * i / sampleRate) * Short.MAX_VALUE).toInt().toShort()
-        }
-
-        audioTrack = AudioTrack(
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build(),
-            AudioFormat.Builder()
-                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .setSampleRate(sampleRate)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                .build(),
-            bufferSize,
-            AudioTrack.MODE_STREAM,
-            AudioManager.AUDIO_SESSION_ID_GENERATE
-        )
-        audioTrack.play()
-        audioTrack.write(pinkNoise, 0, pinkNoise.size)
-
-        pinkNoiseFFT = calculateFFT(pinkNoise)
-    }
 
     private fun startRecording() {
         val context = requireContext()
@@ -127,81 +100,115 @@ class MagnitudeFragment : Fragment() {
             AudioFormat.ENCODING_PCM_16BIT,
             bufferSize
         )
+
+        audioTrack = AudioTrack.Builder()
+            .setAudioFormat(
+                AudioFormat.Builder()
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setSampleRate(sampleRate)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .build()
+            )
+            .setBufferSizeInBytes(bufferSize * 4)
+            .setTransferMode(AudioTrack.MODE_STREAM)
+            .build()
+
         audioRecord.startRecording()
+        audioTrack.play()
+        isRecording = true
 
-        Thread {
-            while (true) {
-                val readSize = audioRecord.read(audioBuffer, 0, bufferSize)
-                if (readSize > 0) {
-                    val micInputFFT = calculateFFT(audioBuffer)
+        executorService = Executors.newSingleThreadExecutor()
+        executorService.execute {
+            val audioBuffer = ShortArray(bufferSize)
+            val complexBuffer = Array(bufferSize) { Complex(0.0, 0.0) }
+            val pinkNoise = pinkNoiseGenerator.generate(bufferSize)
+            pinkNoiseMagnitudes = fftProcessor.dbConverter(pinkNoise)
+            pinkNoiseFrequencies = fftProcessor.frequencyConverter(pinkNoise, sampleRate)
+            val pinkNoiseShort = pinkNoise.map {
+                val scaledValue = (it.real * 32767).coerceIn(-32768.0, 32767.0).toInt().toShort()
+                scaledValue
+            }.toShortArray()
 
-                    val magnitudeDifference = calculateMagnitudeDifference(pinkNoiseFFT, micInputFFT)
 
-                    updateGraph(magnitudeDifference)
+            while (isRecording) {
+                audioTrack.write(pinkNoiseShort, 0, bufferSize)
 
-                    if (System.currentTimeMillis() - lastFlushTime >= bufferFlushInterval) {
-                        flushBuffer()
-                        lastFlushTime = System.currentTimeMillis()
+                val readCount = audioRecord.read(audioBuffer, 0, bufferSize)
+                if (readCount > 0) {
+                    for (i in audioBuffer.indices) {
+                        complexBuffer[i].real = audioBuffer[i].toDouble()
+                        complexBuffer[i].imaginary = 0.0
                     }
+
+                    val windowedSignal = fftProcessor.applyHannWindow(complexBuffer)
+                    val fftResult = fftProcessor.fft(windowedSignal)
+                    micMagnitudes = fftProcessor.dbConverter(fftResult)
+                    micFrequencies = fftProcessor.frequencyConverter(fftResult, sampleRate)
+
+                    val magnitudeComparison = diffMagnitude.compareMagnitudesFFTStyle(micMagnitudes, pinkNoiseMagnitudes)
+
+                    activity.runOnUiThread {
+                        updateGraph(micFrequencies, magnitudeComparison)
+                    }
+
+                    audioBuffer.fill(0) // Limpiar el búfer de audio
                 }
             }
-        }.start()
+
+            audioRecord.release()
+        }
     }
-
-    private fun calculateFFT(input: ShortArray): DoubleArray {
-        val inputSignal = input.map { it.toDouble() }.toDoubleArray()
-        val fftData = DoubleArray(inputSignal.size * 2)
-
-        for (i in inputSignal.indices) {
-            fftData[2 * i] = inputSignal[i]
-            fftData[2 * i + 1] = 0.0
+    
+    private fun stopRecording() {
+        if (isRecording && ::audioRecord.isInitialized) {
+            isRecording = false
+            audioRecord.stop()
+            audioRecord.release()
         }
 
-        val fft = DoubleFFT_1D(inputSignal.size.toLong())
-        fft.complexForward(fftData)
-
-        return fftData
     }
 
-    private fun calculateMagnitudeDifference(pinkNoiseFFT: DoubleArray, micInputFFT: DoubleArray): DoubleArray {
-        val magnitudeDifference = DoubleArray(pinkNoiseFFT.size / 2)
+    private fun setupGraph() {
+        chart.description.isEnabled = false
 
-        for (i in magnitudeDifference.indices) {
-            val pinkNoiseMagnitude = sqrt(pinkNoiseFFT[2 * i] * pinkNoiseFFT[2 * i] + pinkNoiseFFT[2 * i + 1] * pinkNoiseFFT[2 * i + 1])
-            val micInputMagnitude = sqrt(micInputFFT[2 * i] * micInputFFT[2 * i] + micInputFFT[2 * i + 1] * micInputFFT[2 * i + 1])
-
-            magnitudeDifference[i] = 20 * log10(micInputMagnitude / pinkNoiseMagnitude)
-        }
-
-        return magnitudeDifference
-    }
-
-    private fun updateGraph(magnitudeData: DoubleArray) {
-        val series = LineGraphSeries<DataPoint>()
-        for (i in magnitudeData.indices) {
-            val freq = i.toDouble() * sampleRate / magnitudeData.size
-            if (freq >= 20 && freq <= 20000) {
-                series.appendData(DataPoint(log10(freq), magnitudeData[i]), true, magnitudeData.size)
+        val xAxis = chart.xAxis
+        xAxis.position = XAxis.XAxisPosition.BOTTOM
+        xAxis.granularity = 1f
+        xAxis.setLabelCount(6, true)
+        xAxis.axisMinimum = log10(20f)
+        xAxis.axisMaximum = log10(20000f)
+        xAxis.valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                val freq = 10.0.pow(value.toDouble()).toFloat()
+                return when {
+                    freq >= 1000 -> "${(freq / 1000).toInt()}k"
+                    else -> freq.toInt().toString()
+                }
             }
         }
-        activity?.runOnUiThread {
-            graphView.removeAllSeries()
-            graphView.addSeries(series)
-        }
+        xAxis.labelRotationAngle = 45f
+
+        val yAxis = chart.axisLeft
+        yAxis.axisMinimum = -90f
+        yAxis.axisMaximum = 0f
+
+        chart.axisRight.isEnabled = false
     }
 
-    private fun flushBuffer() {
-        for (i in audioBuffer.indices) {
-            audioBuffer[i] = 0
-        }
-        println("Buffer flushed to prevent memory issues.")
-    }
+    private fun updateGraph(frequencies: DoubleArray, magnitudesInDb: DoubleArray) {
+        val dataPoints = frequencies.indices
+            .map { i -> Entry(log10(frequencies[i].toFloat()).takeIf { it.isFinite() } ?: 20f, magnitudesInDb[i].toFloat()) }
+            .filter { it.x in log10(20f)..log10(20000f) }
+            .sortedBy { it.x }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        audioRecord.stop()
-        audioRecord.release()
-        audioTrack.stop()
-        audioTrack.release()
+        val dataSet = LineDataSet(dataPoints, "Magnitudes RTA")
+        dataSet.setDrawCircles(false)
+        dataSet.setDrawValues(false)
+        dataSet.lineWidth = 2f
+
+        val lineData = LineData(dataSet)
+        chart.data = lineData
+
+        chart.invalidate()
     }
 }

@@ -4,10 +4,9 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <com.jjoe64.graphview.GraphView
-        android:id="@+id/magnitude_graph"
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/graph"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="16dp" />
+        android:layout_height="match_parent" />
 
 </FrameLayout>
