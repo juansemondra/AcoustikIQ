@@ -158,7 +158,7 @@ class MagnitudeFragment : Fragment() {
             audioRecord.release()
         }
     }
-    
+
     private fun stopRecording() {
         if (isRecording && ::audioRecord.isInitialized) {
             isRecording = false
