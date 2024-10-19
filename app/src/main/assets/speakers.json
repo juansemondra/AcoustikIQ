@@ -1,0 +1,363 @@
+[
+        {
+            "model": "L-Acoustics K2",
+            "type": "Line Array",
+            "maxSPL": 143,
+            "minFreq": 35,
+            "maxFreq": 20000,
+            "horDirectivity": 70,
+            "verDirectivity": 40
+        },
+        {
+            "model": "L-Acoustics Kara II",
+            "type": "Line Array",
+            "maxSPL": 140,
+            "minFreq": 55,
+            "maxFreq": 20000,
+            "horDirectivity": 110,
+            "verDirectivity": 30
+        },
+        {
+            "model": "d&b audiotechnik J8",
+            "type": "Line Array",
+            "maxSPL": 145,
+            "minFreq": 32,
+            "maxFreq": 18000,
+            "horDirectivity": 80,
+            "verDirectivity": 50
+        },
+        {
+            "model": "d&b audiotechnik V8",
+            "type": "Line Array",
+            "maxSPL": 140,
+            "minFreq": 48,
+            "maxFreq": 18000,
+            "horDirectivity": 80,
+            "verDirectivity": 40
+        },
+        {
+            "model": "Meyer Sound LEO-M",
+            "type": "Line Array",
+            "maxSPL": 146,
+            "minFreq": 30,
+            "maxFreq": 18000,
+            "horDirectivity": 90,
+            "verDirectivity": 45
+        },
+        {
+            "model": "Meyer Sound LYON",
+            "type": "Line Array",
+            "maxSPL": 144,
+            "minFreq": 34,
+            "maxFreq": 16000,
+            "horDirectivity": 90,
+            "verDirectivity": 40
+        },
+        {
+            "model": "JBL VTX A12",
+            "type": "Line Array",
+            "maxSPL": 146,
+            "minFreq": 45,
+            "maxFreq": 18000,
+            "horDirectivity": 90,
+            "verDirectivity": 50
+        },
+        {
+            "model": "JBL VTX V20",
+            "type": "Line Array",
+            "maxSPL": 144,
+            "minFreq": 40,
+            "maxFreq": 18000,
+            "horDirectivity": 90,
+            "verDirectivity": 40
+        },
+        {
+            "model": "Martin Audio WPS",
+            "type": "Line Array",
+            "maxSPL": 141,
+            "minFreq": 60,
+            "maxFreq": 18000,
+            "horDirectivity": 80,
+            "verDirectivity": 60
+        },
+        {
+            "model": "Martin Audio WPL",
+            "type": "Line Array",
+            "maxSPL": 146,
+            "minFreq": 55,
+            "maxFreq": 18000,
+            "horDirectivity": 90,
+            "verDirectivity": 60
+        },
+        {
+            "model": "RCF HDL 50-A",
+            "type": "Line Array",
+            "maxSPL": 143,
+            "minFreq": 45,
+            "maxFreq": 20000,
+            "horDirectivity": 90,
+            "verDirectivity": 50
+        },
+        {
+            "model": "RCF TTL55-A",
+            "type": "Line Array",
+            "maxSPL": 145,
+            "minFreq": 35,
+            "maxFreq": 20000,
+            "horDirectivity": 90,
+            "verDirectivity": 40
+        },
+        {
+            "model": "Adamson E12",
+            "type": "Line Array",
+            "maxSPL": 142,
+            "minFreq": 60,
+            "maxFreq": 18000,
+            "horDirectivity": 80,
+            "verDirectivity": 40
+        },
+        {
+            "model": "Adamson S10",
+            "type": "Line Array",
+            "maxSPL": 141,
+            "minFreq": 50,
+            "maxFreq": 18000,
+            "horDirectivity": 110,
+            "verDirectivity": 40
+        },
+        {
+            "model": "EAW KF760",
+            "type": "Line Array",
+            "maxSPL": 144,
+            "minFreq": 35,
+            "maxFreq": 20000,
+            "horDirectivity": 90,
+            "verDirectivity": 50
+        },
+        {
+            "model": "EAW KF730",
+            "type": "Line Array",
+            "maxSPL": 141,
+            "minFreq": 48,
+            "maxFreq": 20000,
+            "horDirectivity": 110,
+            "verDirectivity": 60
+        },
+        {
+            "model": "NEXO GEO M12",
+            "type": "Line Array",
+            "maxSPL": 142,
+            "minFreq": 40,
+            "maxFreq": 19000,
+            "horDirectivity": 80,
+            "verDirectivity": 50
+        },
+        {
+            "model": "NEXO STM M28",
+            "type": "Line Array",
+            "maxSPL": 145,
+            "minFreq": 45,
+            "maxFreq": 20000,
+            "horDirectivity": 90,
+            "verDirectivity": 40
+        },
+        {
+            "model": "Electro-Voice X-Line Advance X2-212",
+            "type": "Line Array",
+            "maxSPL": 146,
+            "minFreq": 40,
+            "maxFreq": 20000,
+            "horDirectivity": 80,
+            "verDirectivity": 50
+        },
+        {
+            "model": "Electro-Voice XLD291",
+            "type": "Line Array",
+            "maxSPL": 144,
+            "minFreq": 60,
+            "maxFreq": 20000,
+            "horDirectivity": 120,
+            "verDirectivity": 40
+        },
+        {
+            "model": "L-Acoustics K1",
+            "type": "Line Array",
+            "maxSPL": 146,
+            "minFreq": 35,
+            "maxFreq": 20000,
+            "horDirectivity": 90,
+            "verDirectivity": 45
+        },
+        {
+            "model": "L-Acoustics A15",
+            "type": "Line Array",
+            "maxSPL": 144,
+            "minFreq": 40,
+            "maxFreq": 20000,
+            "horDirectivity": 70,
+            "verDirectivity": 40
+        },
+        {
+            "model": "d&b audiotechnik KSL8",
+            "type": "Line Array",
+            "maxSPL": 145,
+            "minFreq": 35,
+            "maxFreq": 18000,
+            "horDirectivity": 80,
+            "verDirectivity": 50
+        },
+        {
+            "model": "d&b audiotechnik Y8",
+            "type": "Line Array",
+            "maxSPL": 139,
+            "minFreq": 54,
+            "maxFreq": 19000,
+            "horDirectivity": 80,
+            "verDirectivity": 40
+        },
+        {
+            "model": "Meyer Sound MICA",
+            "type": "Line Array",
+            "maxSPL": 138,
+            "minFreq": 60,
+            "maxFreq": 18000,
+            "horDirectivity": 100,
+            "verDirectivity": 35
+        },
+        {
+            "model": "Meyer Sound MILO",
+            "type": "Line Array",
+            "maxSPL": 140,
+            "minFreq": 55,
+            "maxFreq": 18000,
+            "horDirectivity": 90,
+            "verDirectivity": 40
+        },
+        {
+            "model": "JBL VTX A8",
+            "type": "Line Array",
+            "maxSPL": 142,
+            "minFreq": 50,
+            "maxFreq": 19000,
+            "horDirectivity": 90,
+            "verDirectivity": 50
+        },
+        {
+            "model": "JBL VLA-C2100",
+            "type": "Line Array",
+            "maxSPL": 145,
+            "minFreq": 40,
+            "maxFreq": 18000,
+            "horDirectivity": 80,
+            "verDirectivity": 40
+        },
+        {
+            "model": "RCF HDL 30-A",
+            "type": "Line Array",
+            "maxSPL": 137,
+            "minFreq": 50,
+            "maxFreq": 20000,
+            "horDirectivity": 100,
+            "verDirectivity": 30
+        },
+        {
+            "model": "RCF TTL33-A II",
+            "type": "Line Array",
+            "maxSPL": 140,
+            "minFreq": 45,
+            "maxFreq": 20000,
+            "horDirectivity": 90,
+            "verDirectivity": 40
+        },
+        {
+            "model": "Martin Audio MLA Compact",
+            "type": "Line Array",
+            "maxSPL": 144,
+            "minFreq": 48,
+            "maxFreq": 18000,
+            "horDirectivity": 90,
+            "verDirectivity": 60
+        },
+        {
+            "model": "Martin Audio CDD-Live 8",
+            "type": "Line Array",
+            "maxSPL": 134,
+            "minFreq": 55,
+            "maxFreq": 18000,
+            "horDirectivity": 100,
+            "verDirectivity": 50
+        },
+        {
+            "model": "Adamson IS10",
+            "type": "Line Array",
+            "maxSPL": 139,
+            "minFreq": 60,
+            "maxFreq": 18000,
+            "horDirectivity": 100,
+            "verDirectivity": 50
+        },
+        {
+            "model": "Adamson E15",
+            "type": "Line Array",
+            "maxSPL": 144,
+            "minFreq": 40,
+            "maxFreq": 18000,
+            "horDirectivity": 80,
+            "verDirectivity": 50
+        },
+        {
+            "model": "EAW RSX208L",
+            "type": "Line Array",
+            "maxSPL": 138,
+            "minFreq": 48,
+            "maxFreq": 18000,
+            "horDirectivity": 90,
+            "verDirectivity": 40
+        },
+        {
+            "model": "EAW Anya",
+            "type": "Line Array",
+            "maxSPL": 140,
+            "minFreq": 55,
+            "maxFreq": 20000,
+            "horDirectivity": 100,
+            "verDirectivity": 40
+        },
+        {
+            "model": "NEXO GEO S12",
+            "type": "Line Array",
+            "maxSPL": 142,
+            "minFreq": 45,
+            "maxFreq": 20000,
+            "horDirectivity": 100,
+            "verDirectivity": 40
+        },
+        {
+            "model": "NEXO STM M46",
+            "type": "Line Array",
+            "maxSPL": 146,
+            "minFreq": 40,
+            "maxFreq": 20000,
+            "horDirectivity": 80,
+            "verDirectivity": 50
+        },
+        {
+            "model": "Electro-Voice XLE181",
+            "type": "Line Array",
+            "maxSPL": 135,
+            "minFreq": 60,
+            "maxFreq": 20000,
+            "horDirectivity": 90,
+            "verDirectivity": 40
+        },
+        {
+            "model": "Electro-Voice XLD281",
+            "type": "Line Array",
+            "maxSPL": 138,
+            "minFreq": 55,
+            "maxFreq": 20000,
+            "horDirectivity": 100,
+            "verDirectivity": 40
+        }
+
+]

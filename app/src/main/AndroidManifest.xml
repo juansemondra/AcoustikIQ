@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
     <application
         android:allowBackup="true"
@@ -14,6 +18,10 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:targetApi="31">
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyB22toYWo96YegAQ5F39rmWH-Av_Xzl1gY" />
+            />
         <activity
             android:name=".activities.SpectrumAnalysisActivity" />
         <activity
@@ -23,15 +31,17 @@
         <activity
             android:name=".activities.MagnitudeActivity"/>
         <activity
-            android:name=".activities.EventActivity"/>
+            android:name=".activities.ConcertActivity"/>
         <activity
-            android:name=".activities.EventDetailActivity"/>
+            android:name=".activities.EditConcertActivity"/>
         <activity
-            android:name=".activities.StageActivity"/>
+            android:name=".activities.VenueActivity"/>
         <activity
-            android:name=".activities.MapActivity"/>
+            android:name=".activities.OpenVenueActivity"/>
         <activity
-            android:name=".activities.SpeakerActivity"/>
+            android:name=".activities.EditVenueActivity"/>
+        <activity
+            android:name=".activities.GalleryActivity"/>
 
         <activity
             android:name=".activities.MainActivity"
@@ -42,6 +52,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

@@ -1,0 +1,40 @@
+[
+  {
+    "name": "Live at MSG",
+    "date": 1631737200000,
+    "location": {
+      "latitude": 40.712776,
+      "longitude": -74.005974,
+      "altitude": 10.0
+    },
+    "venues": [
+      {
+        "name": "Madison Square Garden",
+        "venueLineArray": [
+          {
+            "type": "Line Array",
+            "system": {
+              "model": "L-Acoustics K2",
+              "type": "Line Array",
+              "maxSPL": 143,
+              "minFreq": 35,
+              "maxFreq": 20000,
+              "horDirectivity": 70,
+              "verDirectivity": 40
+            },
+            "quantity": 12,
+            "location": {
+              "latitude": 40.712776,
+              "longitude": -74.005974,
+              "altitude": 10.0
+            },
+            "delay": 5.0,
+            "calibratedFreq": true,
+            "calibratedPhase": false
+          }
+        ],
+        "temperature": 20.0
+      }
+    ]
+  }
+]

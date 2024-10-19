@@ -88,7 +88,7 @@
             android:id="@+id/button5"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="EQ Recommendations"
+            android:text="Gallery"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/md_theme_primary"
             android:textColor="@color/md_theme_onPrimary" />

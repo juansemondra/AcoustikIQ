@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/concertNameTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Concert Name" />
+
+    <TextView
+        android:id="@+id/concertDateTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Concert Date" />
+
+    <TextView
+        android:id="@+id/concertLocationTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Concert Location" />
+
+    <!-- RecyclerView para mostrar la lista de Venues -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/venueRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false" />
+</LinearLayout>

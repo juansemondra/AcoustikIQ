@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/typeTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Type" />
+
+    <TextView
+        android:id="@+id/systemTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="System" />
+
+    <TextView
+        android:id="@+id/quantityTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Quantity" />
+
+    <TextView
+        android:id="@+id/locationTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Location" />
+
+    <TextView
+        android:id="@+id/delayTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Delay" />
+
+    <TextView
+        android:id="@+id/calibratedFreqTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Calibrated Freq" />
+
+    <TextView
+        android:id="@+id/calibratedPhaseTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Calibrated Phase" />
+</LinearLayout>

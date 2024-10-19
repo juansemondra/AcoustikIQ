@@ -12,4 +12,10 @@
     <string name="menu_option10">Salir</string>
     <string name="db_tag">0.00dB</string>
     <string name="back_button_desc">Back</string>
+    <string name="snackbar_dismiss_label">:c\n</string>
+    <string name="label_camera">camara</string>
+    <string name="label_video_switch">cambiar</string>
+    <string name="label_shoot">capturar</string>
+    <string name="label_galeria">galeria\n</string>
+    <string name="label_pick">escoger</string>
 </resources>

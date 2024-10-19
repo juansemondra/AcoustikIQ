@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "621397053657",
+    "project_id": "acoustikiq-d21bb",
+    "storage_bucket": "acoustikiq-d21bb.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:621397053657:android:e5d9254639028e2b2e2ec8",
+        "android_client_info": {
+          "package_name": "com.puj.acoustikiq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABHApUFAiqo-3hp1qTutdRgLwjxPHfe_g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

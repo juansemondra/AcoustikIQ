@@ -24,16 +24,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(windowBinding.root)
 
 
-        //CODIGO PARA PERMISOS
 
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_CODE_MIC_PERMISSION)
         }
 
-        //CODIGO PARA BOTONES MENU
-
         windowBinding.button1.setOnClickListener{
-            val intentButton1 = Intent(this, EventActivity::class.java)
+            val intentButton1 = Intent(this, ConcertActivity::class.java)
             startActivity(intentButton1)
             println("BUTTON 1")
         }
@@ -58,6 +55,8 @@ class MainActivity : AppCompatActivity() {
             println("BUTTON 8")
         }
         windowBinding.button5.setOnClickListener{
+            val intentButton5 = Intent(this, GalleryActivity::class.java)
+            startActivity(intentButton5)
             println("BUTTON 5")
         }
         windowBinding.button6.setOnClickListener{

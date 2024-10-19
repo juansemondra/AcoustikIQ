@@ -60,9 +60,15 @@ dependencies {
     implementation(libs.mpandroidchart)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.gson)
     implementation(libs.graphview)
+    implementation (libs.androidx.fragment.ktx)
+
+
 
     implementation(libs.jtransforms)
+    implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
