@@ -18,4 +18,25 @@
     <string name="label_shoot">capturar</string>
     <string name="label_galeria">galeria\n</string>
     <string name="label_pick">escoger</string>
+    <string name="home_label">Hola %1$s, con id %2$s</string>
+    <string name="forgot_password_label">Olvido Password</string>
+    <string name="signup_label">Registrar</string>
+    <string name="login_label">Ingreso</string>
+    <string name="password_label">Password</string>
+    <string name="email_label">Email</string>
+    <string name="mail_error_label">Hay un error en el campo de email.</string>
+    <string name="error_pass_label">Hay un error en el campo de password.</string>
+    <string name="manu_logout">Salir</string>
+    <string name="menu_profile">Perfil</string>
+    <string name="snackbar_comfirm_label">Ok</string>
+    <string name="error_name_label">Hay un error en el campo de nombre</string>
+    <string name="error_phone_label">Hay un error en el campo de telefono</string>
+    <string name="register_label">Registro</string>
+    <string name="name_label">Nombre</string>
+    <string name="phone_label">Telefono</string>
+    <string name="perfil_label">Perfil</string>
+    <string name="profile_name">Nombre</string>
+    <string name="profile_phone">Telefono</string>
+    <string name="profile_update">Actualizar</string>
+
 </resources>

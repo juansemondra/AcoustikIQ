@@ -27,7 +27,6 @@
             tools:context=".fragments.MapsFragment" />
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Botón para agregar Line Array -->
     <Button
         android:id="@+id/addLineArrayButton"
         android:layout_width="wrap_content"

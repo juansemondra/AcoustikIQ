@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -21,6 +22,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.puj.acoustikiq.R
 import com.puj.acoustikiq.databinding.FragmentMapsBinding
@@ -29,21 +31,25 @@ import com.puj.acoustikiq.model.LineArray
 import com.puj.acoustikiq.model.Speaker
 import com.puj.acoustikiq.model.Venue
 import com.puj.acoustikiq.adapters.SpeakerAdapter
+import com.puj.acoustikiq.databinding.DialogEditLineArrayBinding
 import com.puj.acoustikiq.model.Concert
+import com.puj.acoustikiq.util.Alerts
 import java.io.File
-import java.io.FileReader
-import java.io.FileWriter
+import java.io.InputStreamReader
 
 class MapsFragment : Fragment(), SensorEventListener {
 
     private lateinit var binding: FragmentMapsBinding
+    private lateinit var alerts: Alerts
     private lateinit var sensorManager: SensorManager
     private lateinit var rotationSensor: Sensor
-    private lateinit var gMap: GoogleMap
+    private var zoomLevel = 15f
+    private var moveCamera = true
+    private var positionMarker: Marker? = null
+    lateinit var gMap: GoogleMap
     private lateinit var venue: Venue
-    private var speakersList: List<Speaker> = listOf()
+    private var speakersList: MutableList<Speaker> = mutableListOf()
     private var currentRotation = 0f
-
     private var position: LatLng = LatLng(-34.0, 151.0)
 
     override fun onCreateView(
@@ -52,16 +58,13 @@ class MapsFragment : Fragment(), SensorEventListener {
     ): View {
         binding = FragmentMapsBinding.inflate(inflater, container, false)
 
-        venue = arguments?.getParcelable("venue") ?: throw IllegalStateException("Venue not found in arguments")
-
-        if (!::venue.isInitialized) {
-            throw IllegalStateException("Venue is not initialized")
-        }
+        venue = arguments?.getParcelable("venue")
+            ?: throw IllegalStateException("Venue not found in arguments")
 
         sensorManager = context?.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)!!
 
-        loadSpeakersFromJson()
+        speakersList = loadSpeakersFromJson()
 
         val callback = OnMapReadyCallback { googleMap ->
             gMap = googleMap
@@ -92,7 +95,11 @@ class MapsFragment : Fragment(), SensorEventListener {
             }
         }
 
-        val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
+        val mapFragment = childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
+            ?: SupportMapFragment.newInstance().also {
+                childFragmentManager.beginTransaction().replace(R.id.map, it).commit()
+            }
+
         mapFragment.getMapAsync(callback)
 
         binding.addLineArrayButton.setOnClickListener {
@@ -103,42 +110,44 @@ class MapsFragment : Fragment(), SensorEventListener {
     }
 
     private fun showEditLineArrayDialog(lineArray: LineArray, marker: Marker) {
-        val dialogBinding = DialogAddLineArrayBinding.inflate(LayoutInflater.from(context))
+        val dialogBinding = DialogEditLineArrayBinding.inflate(LayoutInflater.from(context))
 
-        dialogBinding.speakerDropdown.setSelection(speakersList.indexOf(lineArray.system))
+        val speakerAdapter =
+            SpeakerAdapter(requireContext(), android.R.layout.simple_spinner_item, speakersList)
+        dialogBinding.speakerDropdown.adapter = speakerAdapter
+
+        val currentSpeakerIndex = speakersList.indexOfFirst { it.model == lineArray.system.model }
+        dialogBinding.speakerDropdown.setSelection(currentSpeakerIndex)
+
         dialogBinding.quantityInput.setText(lineArray.quantity.toString())
 
         AlertDialog.Builder(requireContext())
             .setTitle("Editar Line Array")
             .setView(dialogBinding.root)
             .setPositiveButton("Guardar") { _, _ ->
-                lineArray.system = dialogBinding.speakerDropdown.selectedItem as Speaker
-                lineArray.quantity = dialogBinding.quantityInput.text.toString().toIntOrNull() ?: lineArray.quantity
+                val selectedSpeaker = dialogBinding.speakerDropdown.selectedItem as Speaker
+                val newQuantity =
+                    dialogBinding.quantityInput.text.toString().toIntOrNull() ?: lineArray.quantity
 
-                marker.position = LatLng(lineArray.location.latitude, lineArray.location.longitude)
-                marker.title = lineArray.system.model
+                lineArray.system = selectedSpeaker
+                lineArray.quantity = newQuantity
+
+                marker.title = selectedSpeaker.model
 
                 saveLineArrayToFiles(lineArray)
+
+                Toast.makeText(requireContext(), "Line Array actualizado", Toast.LENGTH_SHORT)
+                    .show()
             }
             .setNegativeButton("Cancelar", null)
             .show()
     }
 
-    private fun loadSpeakersFromJson() {
-        val speakersFile = File(requireContext().filesDir, "speakers.json")
-        if (!speakersFile.exists()) return
-
-        val gson = Gson()
-        val speakerType = object : TypeToken<List<Speaker>>() {}.type
-        val reader = FileReader(speakersFile)
-        speakersList = gson.fromJson(reader, speakerType)
-        reader.close()
-    }
-
     private fun showAddLineArrayDialog() {
         val dialogBinding = DialogAddLineArrayBinding.inflate(LayoutInflater.from(context))
 
-        val speakerAdapter = SpeakerAdapter(requireContext(), android.R.layout.simple_spinner_item, speakersList)
+        val speakerAdapter =
+            SpeakerAdapter(requireContext(), android.R.layout.simple_spinner_item, speakersList)
         dialogBinding.speakerDropdown.adapter = speakerAdapter
 
         AlertDialog.Builder(requireContext())
@@ -162,37 +171,79 @@ class MapsFragment : Fragment(), SensorEventListener {
                 saveLineArrayToFiles(newLineArray)
 
                 val markerOptions = MarkerOptions()
-                    .position(LatLng(getCurrentLocation().latitude, getCurrentLocation().longitude))
+                    .position(LatLng(position.latitude, position.longitude))
                     .title(newLineArray.type)
-                    .rotation(currentRotation)
-                    .icon(bitmapDescriptorFromVector(requireContext(), R.drawable.military_tech_24px))
+                    .icon(
+                        bitmapDescriptorFromVector(
+                            requireContext(),
+                            R.drawable.military_tech_24px
+                        )
+                    )
 
                 gMap.addMarker(markerOptions)
-
-                gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(getCurrentLocation().latitude, getCurrentLocation().longitude), 15f))
+                gMap.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(
+                        LatLng(
+                            position.latitude,
+                            position.longitude
+                        ), 15f
+                    )
+                )
             }
             .setNegativeButton("Cancelar", null)
             .show()
     }
 
-    private fun saveLineArrayToFiles(lineArray: LineArray) {
-        saveLineArrayToFile(lineArray)
-
-        val venuesFile = File(requireContext().filesDir, "venues.json")
-        updateVenueInFile(venue, venuesFile)
-
-        val concertsFile = File(requireContext().filesDir, "concerts.json")
-        updateConcertInFile(venue, concertsFile)
+    private fun getCurrentLocation(): Location {
+        val location = Location("provider")
+        location.latitude = position.latitude
+        location.longitude = position.longitude
+        return location
     }
 
-    private fun updateVenueInFile(updatedVenue: Venue, file: File) {
+    private fun saveLineArrayToFiles(lineArray: LineArray) {
+        try {
+            saveLineArrayToFile(lineArray)
+
+            updateVenueInFile(venue, "venues.json")
+            updateConcertInFile(venue, "concerts.json")
+
+            println("Los archivos se guardaron correctamente.")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            println("Error al guardar los archivos: ${e.message}")
+        }
+    }
+
+    private fun saveLineArrayToFile(lineArray: LineArray) {
+        val lineArraysFile = File(requireContext().getExternalFilesDir(null), "linearrays.json")
         val gson = Gson()
+
+        val lineArrayList: MutableList<LineArray> = if (lineArraysFile.exists()) {
+            lineArraysFile.bufferedReader().use { reader ->
+                val type = object : TypeToken<MutableList<LineArray>>() {}.type
+                gson.fromJson(reader, type)
+            }
+        } else {
+            mutableListOf()
+        }
+
+        lineArrayList.add(lineArray)
+
+        lineArraysFile.bufferedWriter().use { writer ->
+            writer.write(gson.toJson(lineArrayList))
+        }
+    }
+
+    private fun updateVenueInFile(updatedVenue: Venue, fileName: String) {
+        val gson = Gson()
+
+        val file = File(requireContext().getExternalFilesDir(null), fileName)
+
         val venuesList: MutableList<Venue> = if (file.exists()) {
-            val reader = FileReader(file)
+            val reader = file.bufferedReader()
             val type = object : TypeToken<MutableList<Venue>>() {}.type
-            val existingList: MutableList<Venue> = gson.fromJson(reader, type)
-            reader.close()
-            existingList
+            gson.fromJson(reader, type)
         } else {
             mutableListOf()
         }
@@ -204,19 +255,20 @@ class MapsFragment : Fragment(), SensorEventListener {
             venuesList.add(updatedVenue)
         }
 
-        val writer = FileWriter(file)
-        writer.write(gson.toJson(venuesList))
-        writer.close()
+        file.bufferedWriter().use { writer ->
+            writer.write(gson.toJson(venuesList))
+        }
     }
 
-    private fun updateConcertInFile(updatedVenue: Venue, file: File) {
+    private fun updateConcertInFile(updatedVenue: Venue, fileName: String) {
         val gson = Gson()
+
+        val file = File(requireContext().getExternalFilesDir(null), fileName)
+
         val concertsList: MutableList<Concert> = if (file.exists()) {
-            val reader = FileReader(file)
+            val reader = file.bufferedReader()
             val type = object : TypeToken<MutableList<Concert>>() {}.type
-            val existingList: MutableList<Concert> = gson.fromJson(reader, type)
-            reader.close()
-            existingList
+            gson.fromJson(reader, type)
         } else {
             mutableListOf()
         }
@@ -227,42 +279,31 @@ class MapsFragment : Fragment(), SensorEventListener {
             }
         }
 
-        val writer = FileWriter(file)
-        writer.write(gson.toJson(concertsList))
-        writer.close()
-    }
-
-    private fun getCurrentLocation(): Location {
-        val location = Location("provider")
-        location.latitude = position.latitude
-        location.longitude = position.longitude
-        return location
-    }
-
-    private fun saveLineArrayToFile(lineArray: LineArray) {
-        val lineArraysFile = File(requireContext().filesDir, "linearrays.json")
-        val gson = Gson()
-
-        val lineArrayList: MutableList<LineArray> = if (lineArraysFile.exists()) {
-            val reader = FileReader(lineArraysFile)
-            val type = object : TypeToken<MutableList<LineArray>>() {}.type
-            val existingList: MutableList<LineArray> = gson.fromJson(reader, type)
-            reader.close()
-            existingList
-        } else {
-            mutableListOf()
+        file.bufferedWriter().use { writer ->
+            writer.write(gson.toJson(concertsList))
         }
+    }
 
-        lineArrayList.add(lineArray)
+    private fun loadSpeakersFromJson(): MutableList<Speaker> {
+        val assetManager = requireContext().assets
+        val inputStream = assetManager.open("speakers.json")
+        val reader = InputStreamReader(inputStream)
 
-        val writer = FileWriter(lineArraysFile)
-        writer.write(gson.toJson(lineArrayList))
-        writer.close()
+        val gson = GsonBuilder().create()
+
+        val speakerType = object : TypeToken<List<Speaker>>() {}.type
+
+        return gson.fromJson(reader, speakerType)
     }
 
     private fun bitmapDescriptorFromVector(context: Context, vectorResId: Int): BitmapDescriptor? {
         val vectorDrawable = ContextCompat.getDrawable(context, vectorResId)
-        vectorDrawable?.setBounds(0, 0, vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
+        vectorDrawable?.setBounds(
+            0,
+            0,
+            vectorDrawable.intrinsicWidth,
+            vectorDrawable.intrinsicHeight
+        )
         val bitmap = Bitmap.createBitmap(
             vectorDrawable!!.intrinsicWidth,
             vectorDrawable.intrinsicHeight,
@@ -277,6 +318,15 @@ class MapsFragment : Fragment(), SensorEventListener {
         if (event != null && event.sensor == rotationSensor) {
             currentRotation = event.values[0] * 360
         }
+        if (this::gMap.isInitialized) {
+            if (event!!.values[0] > 80) {
+                gMap.setMapStyle(
+                    context?.let { MapStyleOptions.loadRawResourceStyle(it, R.raw.map_day) })
+            } else {
+                gMap.setMapStyle(
+                    context?.let { MapStyleOptions.loadRawResourceStyle(it, R.raw.map_night) })
+            }
+        }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
@@ -289,5 +339,22 @@ class MapsFragment : Fragment(), SensorEventListener {
     override fun onPause() {
         super.onPause()
         sensorManager.unregisterListener(this)
+    }
+
+    fun moveFunction(location: Location) {
+        position = LatLng(location.latitude, location.longitude)
+
+        if (positionMarker == null) {
+            positionMarker = gMap.addMarker(
+                MarkerOptions().position(position)
+                    .title("Tu ubicación")
+                    .icon(bitmapDescriptorFromVector(requireContext(), R.drawable.ic_position_marker))
+            )
+        } else {
+            positionMarker?.position = position
+            positionMarker?.zIndex = 10.0f
+        }
+
+        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel))
     }
 }

@@ -2,39 +2,77 @@ package com.puj.acoustikiq.activities
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
+import android.os.Looper
+import android.util.Log
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.commit
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.google.android.gms.location.*
 import com.puj.acoustikiq.R
+import com.puj.acoustikiq.databinding.ActivityOpenVenueBinding
 import com.puj.acoustikiq.fragments.MapsFragment
 import com.puj.acoustikiq.model.Speaker
 import com.puj.acoustikiq.model.Venue
+import com.puj.acoustikiq.util.Alerts
 import java.io.File
 import java.io.FileReader
 
 class OpenVenueActivity : AppCompatActivity() {
 
+    private val TAG = OpenVenueActivity::class.java
     private lateinit var venue: Venue
     private lateinit var speakersList: List<Speaker>
-
     private val PERM_LOCATION_CODE = 303
+
+    private var alerts = Alerts(this)
+    private lateinit var position: Location
+
+    private lateinit var binding: ActivityOpenVenueBinding
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationRequest: LocationRequest
+    private lateinit var locationCallback: LocationCallback
+
+    private lateinit var mapsFragment: MapsFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_open_venue)
+        enableEdgeToEdge()
+        binding = ActivityOpenVenueBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         venue = intent.getParcelableExtra("venue")
             ?: throw NullPointerException("Venue object is missing in intent")
 
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        setupLocation()
+
+        when {
+            ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                startLocationUpdates()
+            }
+
+            shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) -> {
+                alerts.indefiniteSnackbar(
+                    binding.root,
+                    "El permiso de Localización es necesario para usar esta actividad."
+                )
+            }
+
+            else -> {
+                requestPermissions(
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                    PERM_LOCATION_CODE
+                )
+            }
+        }
 
         loadSpeakersFromJson()
 
@@ -66,6 +104,7 @@ class OpenVenueActivity : AppCompatActivity() {
         if (requestCode == PERM_LOCATION_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 loadMapsFragment()
+                startLocationUpdates()
             } else {
                 Toast.makeText(this, "Permiso de ubicación denegado", Toast.LENGTH_SHORT).show()
             }
@@ -73,13 +112,18 @@ class OpenVenueActivity : AppCompatActivity() {
     }
 
     private fun loadMapsFragment() {
-        val mapsFragment = MapsFragment().apply {
-            arguments = Bundle().apply {
-                putParcelable("venue", venue)
+        val existingFragment = supportFragmentManager.findFragmentById(R.id.map_fragment)
+        if (existingFragment == null) {
+            mapsFragment = MapsFragment().apply {
+                arguments = Bundle().apply {
+                    putParcelable("venue", venue)
+                }
             }
-        }
-        supportFragmentManager.commit {
-            replace(R.id.map_fragment, mapsFragment)
+            supportFragmentManager.commit {
+                replace(R.id.map_fragment, mapsFragment)
+            }
+        } else {
+            mapsFragment = existingFragment as MapsFragment
         }
     }
 
@@ -87,10 +131,60 @@ class OpenVenueActivity : AppCompatActivity() {
         val speakersFile = File(filesDir, "speakers.json")
         if (!speakersFile.exists()) return
 
-        val gson = Gson()
-        val speakerType = object : TypeToken<List<Speaker>>() {}.type
+        val gson = com.google.gson.Gson()
+        val speakerType = object : com.google.gson.reflect.TypeToken<List<Speaker>>() {}.type
         val reader = FileReader(speakersFile)
         speakersList = gson.fromJson(reader, speakerType)
         reader.close()
+    }
+
+    private fun setupLocation() {
+        locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000).apply {
+            setMinUpdateDistanceMeters(5F)
+            setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
+            setWaitForAccurateLocation(true)
+        }.build()
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                locationResult.locations.forEach { location ->
+                    Log.i(TAG.toString(), "onLocationResult: $location")
+                    binding.moveAnimation.speed = (location.speed * 3.6F) / 8F
+
+                    mapsFragment.moveFunction(location)
+
+                    position = location
+                }
+            }
+        }
+    }
+
+    private fun startLocationUpdates() {
+        if (ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest, locationCallback, Looper.getMainLooper()
+            )
+            binding.moveAnimation.resumeAnimation()
+        } else {
+            binding.moveAnimation.pauseAnimation()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startLocationUpdates()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopLocationUpdates()
+    }
+
+    private fun stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+        binding.moveAnimation.pauseAnimation()
     }
 }

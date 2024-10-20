@@ -1,5 +1,6 @@
 package com.puj.acoustikiq.activities
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.puj.acoustikiq.databinding.ActivityEditConcertBinding
@@ -64,16 +65,20 @@ class EditConcertActivity : AppCompatActivity() {
         }
 
         saveConcertsToJson()
+
+        val concertIntent = Intent(this, ConcertActivity::class.java)
+        startActivity(concertIntent)
     }
 
     private fun saveConcertsToJson() {
-        val concertsFile = File(filesDir, "concerts.json")
+        println("SAVE CONCERT TO JSON FUNC")
+        val concertsFile = File(getExternalFilesDir(null), "concerts.json")
         val gson = Gson()
         val jsonString = gson.toJson(concertsList)
 
-        val writer = FileWriter(concertsFile)
-        writer.write(jsonString)
-        writer.flush()
-        writer.close()
+        concertsFile.outputStream().use { outputStream ->
+            outputStream.write(jsonString.toByteArray())
+            outputStream.flush()
+        }
     }
 }

@@ -2,16 +2,18 @@ package com.puj.acoustikiq.activities
 
 import android.content.Intent
 import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.FirebaseApp
 import com.puj.acoustikiq.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
-        private lateinit var windowBinding: ActivityMainBinding
+    private lateinit var windowBinding: ActivityMainBinding
+    private lateinit var auth: FirebaseAuth
 
     companion object {
         const val REQUEST_CODE_MIC_PERMISSION = 1
@@ -23,65 +25,110 @@ class MainActivity : AppCompatActivity() {
         windowBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(windowBinding.root)
 
+        FirebaseApp.initializeApp(this)
+        auth = FirebaseAuth.getInstance()
 
+        auth.signOut()
 
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_CODE_MIC_PERMISSION)
+        if (ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.RECORD_AUDIO),
+                REQUEST_CODE_MIC_PERMISSION
+            )
         }
 
-        windowBinding.button1.setOnClickListener{
-            val intentButton1 = Intent(this, ConcertActivity::class.java)
-            startActivity(intentButton1)
-            println("BUTTON 1")
+        windowBinding.button1.setOnClickListener {
+            if (auth.currentUser != null) {
+                val intentButton1 = Intent(this, ConcertActivity::class.java)
+                startActivity(intentButton1)
+                println("BUTTON 1")
+            } else {
+                Toast.makeText(this, "Tienes que hacer login primero", Toast.LENGTH_SHORT).show()
+            }
         }
-        windowBinding.button2.setOnClickListener{
+
+        windowBinding.button2.setOnClickListener {
             val intentButton2 = Intent(this, SpectrumAnalysisActivity::class.java)
             startActivity(intentButton2)
             println("BUTTON 2")
         }
-        windowBinding.button3.setOnClickListener{
+        windowBinding.button3.setOnClickListener {
             val intentButton3 = Intent(this, LevelMeterActivity::class.java)
             startActivity(intentButton3)
             println("BUTTON 3")
         }
-        windowBinding.button4.setOnClickListener{
+        windowBinding.button4.setOnClickListener {
             val intentButton4 = Intent(this, PhaseAnalyzerActivity::class.java)
             startActivity(intentButton4)
             println("BUTTON 4")
         }
-        windowBinding.button8.setOnClickListener{
+        windowBinding.button8.setOnClickListener {
             val intentButton8 = Intent(this, MagnitudeActivity::class.java)
             startActivity(intentButton8)
             println("BUTTON 8")
         }
-        windowBinding.button5.setOnClickListener{
+        windowBinding.button5.setOnClickListener {
             val intentButton5 = Intent(this, GalleryActivity::class.java)
             startActivity(intentButton5)
             println("BUTTON 5")
         }
-        windowBinding.button6.setOnClickListener{
+        windowBinding.button6.setOnClickListener {
             println("BUTTON 6")
         }
-        windowBinding.button7.setOnClickListener{
+        windowBinding.button7.setOnClickListener {
             println("BUTTON 7")
             finishAffinity()
         }
-
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int,
-                                            permissions: Array<out String>,
-                                            grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            REQUEST_CODE_MIC_PERMISSION -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(applicationContext, "Gracias por confiar en nosotros!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(applicationContext, "Te recomendamos aceptar los permisos", Toast.LENGTH_SHORT).show()
-                }
+        windowBinding.button9.setOnClickListener {
+            if (auth.currentUser != null) {
+                auth.signOut()
+                println("BUTTON 9")
+                val intentButton9 = Intent(this, LoginActivity::class.java)
+                startActivity(intentButton9)
+            } else {
+                println("BUTTON 9")
+                val intentButton9 = Intent(this, LoginActivity::class.java)
+                startActivity(intentButton9)
+            }
+        }
+        windowBinding.button10.setOnClickListener {
+            if (auth.currentUser != null) {
+                println("BUTTON 10")
+            val intentButton10 = Intent(this, ProfileActivity::class.java)
+            startActivity(intentButton10)
+            } else {
+                Toast.makeText(this, "Tienes que hacer login primero", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            REQUEST_CODE_MIC_PERMISSION -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(
+                        applicationContext,
+                        "Gracias por confiar en nosotros!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        applicationContext,
+                        "Te recomendamos aceptar los permisos",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.puj.acoustikiq.R
 
@@ -35,5 +36,15 @@ class Alerts constructor(private val context: Context) {
         val snackbar = Snackbar.make(parentView, message, Snackbar.LENGTH_INDEFINITE)
         snackbar.setAction(R.string.snackbar_dismiss_label) { snackbar.dismiss() }
         snackbar.show()
+    }
+
+    fun showErrorDialog(title: String, message: String) {
+        MaterialAlertDialogBuilder(context)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(context.getString(R.string.snackbar_dismiss_label)) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 }
