@@ -28,6 +28,16 @@ class VenueActivity : AppCompatActivity() {
         venueAdapter = VenueAdapter(concert.venues, ::onVenueClick)
         binding.venueRecyclerView.layoutManager = LinearLayoutManager(this)
         binding.venueRecyclerView.adapter = venueAdapter
+
+        binding.backButton.setOnClickListener(){
+            val backIntent = Intent(this, ConcertActivity::class.java)
+            startActivity(backIntent)
+        }
+
+        binding.createVenueButton.setOnClickListener{
+            val venueIntent = Intent(this, CreateVenueActivity::class.java)
+            startActivity(venueIntent)
+        }
     }
 
     private fun onVenueClick(venue: Venue) {

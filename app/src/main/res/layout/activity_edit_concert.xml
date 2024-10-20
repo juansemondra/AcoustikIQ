@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="@color/md_theme_background">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,36 +18,65 @@
             android:text="Editar Concierto"
             android:textSize="20sp"
             android:textStyle="bold"
+            android:textColor="@color/md_theme_onBackground"
             android:layout_gravity="center"
             android:paddingBottom="16dp" />
 
-        <EditText
-            android:id="@+id/concertNameEditText"
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Nombre del Concierto"
-            android:inputType="text" />
+            android:layout_marginBottom="16dp"
+            app:hintTextColor="@color/md_theme_onSurfaceVariant">
 
-        <EditText
-            android:id="@+id/concertDateEditText"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/concertNameEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:textColor="@color/md_theme_onSurface" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Fecha del Concierto"
-            android:inputType="date" />
+            android:layout_marginBottom="16dp"
+            app:hintTextColor="@color/md_theme_onSurfaceVariant">
 
-        <EditText
-            android:id="@+id/concertLocationEditText"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/concertDateEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="date"
+                android:textColor="@color/md_theme_onSurface" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Ubicación del Concierto"
-            android:inputType="text" />
+            android:layout_marginBottom="16dp"
+            app:hintTextColor="@color/md_theme_onSurfaceVariant">
 
-        <!-- Botón para guardar cambios -->
-        <Button
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/concertLocationEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:textColor="@color/md_theme_onSurface" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/saveConcertButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Guardar Cambios"
+            android:textColor="@color/md_theme_onSurface"
+            android:backgroundTint="@color/md_theme_surface"
             android:layout_marginTop="16dp" />
     </LinearLayout>
 </ScrollView>

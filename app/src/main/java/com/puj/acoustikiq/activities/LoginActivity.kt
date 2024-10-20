@@ -49,6 +49,11 @@ class LoginActivity : AppCompatActivity() {
         binding.forgotButton.setOnClickListener {
             recoverPassword()
         }
+
+        binding.backButton.setOnClickListener(){
+            val backIntent = Intent(this, MainActivity::class.java)
+            startActivity(backIntent)
+        }
     }
 
     private fun validateFields(): Boolean {

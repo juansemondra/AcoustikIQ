@@ -85,6 +85,11 @@ class RegisterActivity : AppCompatActivity() {
         binding.regGalleryBtn.setOnClickListener() {
             startGallery()
         }
+
+        binding.backButton.setOnClickListener(){
+            val backIntent = Intent(this, MainActivity::class.java)
+            startActivity(backIntent)
+        }
     }
 
     private fun validateFields(): Boolean {

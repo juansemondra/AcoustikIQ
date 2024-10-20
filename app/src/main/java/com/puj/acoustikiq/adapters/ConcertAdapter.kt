@@ -1,3 +1,5 @@
+package com.puj.acoustikiq.adapters
+
 import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.ViewGroup

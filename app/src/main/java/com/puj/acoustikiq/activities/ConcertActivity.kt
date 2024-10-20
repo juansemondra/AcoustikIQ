@@ -1,6 +1,6 @@
 package com.puj.acoustikiq.activities
 
-import ConcertAdapter
+import com.puj.acoustikiq.adapters.ConcertAdapter
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
@@ -34,6 +34,17 @@ class ConcertActivity : AppCompatActivity() {
         concertAdapter = ConcertAdapter(concertList, ::onConcertClick)
         binding.concertRecyclerView.layoutManager = LinearLayoutManager(this)
         binding.concertRecyclerView.adapter = concertAdapter
+
+        binding.backButton.setOnClickListener(){
+            val backIntent = Intent(this, MainActivity::class.java)
+            startActivity(backIntent)
+        }
+
+        binding.createConcertButton.setOnClickListener{
+            val concertIntent = Intent(this, CreateConcertActivity::class.java)
+            startActivity(concertIntent)
+        }
+        
     }
 
     private fun loadConcertsFromJson(): List<Concert> {

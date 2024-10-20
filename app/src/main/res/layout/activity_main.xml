@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/md_theme_background"
     tools:context=".activities.MainActivity">
 
     <LinearLayout
@@ -24,111 +25,134 @@
             android:text="@string/app_name"
             android:textColor="@color/md_theme_onPrimary"
             android:textSize="24sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium" />
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/menu_layout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="16dp"
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/top_bar"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:fillViewport="true">
 
-        <Button
-            android:id="@+id/button1"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Events"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/md_theme_primary"
-            android:textColor="@color/md_theme_onPrimary" />
+            android:orientation="vertical"
+            android:padding="16dp">
 
-        <Button
-            android:id="@+id/button2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Spectrum RTA"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/md_theme_primary"
-            android:textColor="@color/md_theme_onPrimary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Events"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
 
-        <Button
-            android:id="@+id/button3"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Level Meter"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/md_theme_primary"
-            android:textColor="@color/md_theme_onPrimary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Spectrum RTA"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
 
-        <Button
-            android:id="@+id/button4"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Phase Analyzer"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/md_theme_primary"
-            android:textColor="@color/md_theme_onPrimary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Level Meter"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
 
-        <Button
-            android:id="@+id/button8"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Magnitude"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/md_theme_primary"
-            android:textColor="@color/md_theme_onPrimary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Phase Analyzer"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
 
-        <Button
-            android:id="@+id/button5"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Gallery"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/md_theme_primary"
-            android:textColor="@color/md_theme_onPrimary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button8"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Magnitude"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
 
-        <Button
-            android:id="@+id/button10"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Profile"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/md_theme_primary"
-            android:textColor="@color/md_theme_onPrimary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button5"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Gallery"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
 
-        <Button
-            android:id="@+id/button9"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Login"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/md_theme_primary"
-            android:textColor="@color/md_theme_onPrimary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button11"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Rutas"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
 
-        <Button
-            android:id="@+id/button6"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Settings"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/md_theme_primary"
-            android:textColor="@color/md_theme_onPrimary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button10"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Profile"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
 
-        <Button
-            android:id="@+id/button7"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Quit"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/md_theme_primary"
-            android:textColor="@color/md_theme_onPrimary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button9"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Login"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
 
-    </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button6"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Settings"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button7"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Quit"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/md_theme_surface"
+                android:textColor="@color/md_theme_onSurface" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

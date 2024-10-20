@@ -87,6 +87,11 @@ class ProfileActivity : AppCompatActivity() {
         binding.profileButton.setOnClickListener {
             updateProfile()
         }
+
+        binding.backButton.setOnClickListener(){
+            val backIntent = Intent(this, MainActivity::class.java)
+            startActivity(backIntent)
+        }
     }
 
     private fun getUserData() {

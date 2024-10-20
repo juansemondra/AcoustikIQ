@@ -1,5 +1,6 @@
 package com.puj.acoustikiq.activities
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.tabs.TabLayoutMediator
@@ -26,5 +27,11 @@ class GalleryActivity : AppCompatActivity() {
                 else -> null
             }
         }.attach()
+
+        binding.backButton.setOnClickListener(){
+            val backIntent = Intent(this, MainActivity::class.java)
+            startActivity(backIntent)
+        }
+
     }
 }

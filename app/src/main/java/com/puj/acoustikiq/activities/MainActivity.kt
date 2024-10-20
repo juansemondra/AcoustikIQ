@@ -28,7 +28,7 @@ class MainActivity : AppCompatActivity() {
         FirebaseApp.initializeApp(this)
         auth = FirebaseAuth.getInstance()
 
-        auth.signOut()
+        //auth.signOut()
 
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -101,6 +101,16 @@ class MainActivity : AppCompatActivity() {
                 println("BUTTON 10")
             val intentButton10 = Intent(this, ProfileActivity::class.java)
             startActivity(intentButton10)
+            } else {
+                Toast.makeText(this, "Tienes que hacer login primero", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        windowBinding.button11.setOnClickListener {
+            if (auth.currentUser != null) {
+                println("BUTTON 11")
+                val intentButton11 = Intent(this, RouteActivity::class.java)
+                startActivity(intentButton11)
             } else {
                 Toast.makeText(this, "Tienes que hacer login primero", Toast.LENGTH_SHORT).show()
             }

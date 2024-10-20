@@ -49,6 +49,12 @@
             android:name=".activities.RegisterActivity"/>
         <activity
             android:name=".activities.ProfileActivity"/>
+        <activity
+            android:name=".activities.RouteActivity"/>
+        <activity
+            android:name=".activities.CreateConcertActivity"/>
+        <activity
+            android:name=".activities.CreateVenueActivity"/>
 
         <activity
             android:name=".activities.MainActivity"
