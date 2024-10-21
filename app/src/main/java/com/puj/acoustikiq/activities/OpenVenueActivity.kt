@@ -17,6 +17,7 @@ import com.google.android.gms.location.*
 import com.puj.acoustikiq.R
 import com.puj.acoustikiq.databinding.ActivityOpenVenueBinding
 import com.puj.acoustikiq.fragments.MapsFragment
+import com.puj.acoustikiq.model.Concert
 import com.puj.acoustikiq.model.Speaker
 import com.puj.acoustikiq.model.Venue
 import com.puj.acoustikiq.util.Alerts
@@ -26,6 +27,7 @@ import java.io.FileReader
 class OpenVenueActivity : AppCompatActivity() {
 
     private val TAG = OpenVenueActivity::class.java
+    private lateinit var concert: Concert
     private lateinit var venue: Venue
     private lateinit var speakersList: List<Speaker>
     private val PERM_LOCATION_CODE = 303
@@ -40,6 +42,11 @@ class OpenVenueActivity : AppCompatActivity() {
 
     private lateinit var mapsFragment: MapsFragment
 
+    private val venuesFileName = "venues.json"
+    private val concertsFileName = "concerts.json"
+    private val linearraysFileName = "linearrays.json"
+    private val speakersFileName = "speakers.json"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -48,6 +55,8 @@ class OpenVenueActivity : AppCompatActivity() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        concert = intent.getParcelableExtra("concert")
+            ?: throw NullPointerException("Concert object is missing in intent")
         venue = intent.getParcelableExtra("venue")
             ?: throw NullPointerException("Venue object is missing in intent")
 
@@ -122,6 +131,7 @@ class OpenVenueActivity : AppCompatActivity() {
         if (existingFragment == null) {
             mapsFragment = MapsFragment().apply {
                 arguments = Bundle().apply {
+                    putParcelable("concert", concert)
                     putParcelable("venue", venue)
                 }
             }
@@ -134,7 +144,7 @@ class OpenVenueActivity : AppCompatActivity() {
     }
 
     private fun loadSpeakersFromJson() {
-        val speakersFile = File(filesDir, "speakers.json")
+        val speakersFile = File(filesDir, speakersFileName)
         if (!speakersFile.exists()) return
 
         val gson = com.google.gson.Gson()

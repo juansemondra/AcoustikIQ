@@ -3,10 +3,6 @@ package com.puj.acoustikiq.fragments
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.location.Location
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -33,23 +29,16 @@ import com.puj.acoustikiq.model.Venue
 import com.puj.acoustikiq.adapters.SpeakerAdapter
 import com.puj.acoustikiq.databinding.DialogEditLineArrayBinding
 import com.puj.acoustikiq.model.Concert
-import com.puj.acoustikiq.util.Alerts
 import java.io.File
 import java.io.InputStreamReader
 
-class MapsFragment : Fragment(), SensorEventListener {
+class MapsFragment : Fragment() {
 
     private lateinit var binding: FragmentMapsBinding
-    private lateinit var alerts: Alerts
-    private lateinit var sensorManager: SensorManager
-    private lateinit var rotationSensor: Sensor
-    private var zoomLevel = 15f
-    private var moveCamera = true
-    private var positionMarker: Marker? = null
-    lateinit var gMap: GoogleMap
+    private lateinit var gMap: GoogleMap
     private lateinit var venue: Venue
+    private lateinit var concert: Concert
     private var speakersList: MutableList<Speaker> = mutableListOf()
-    private var currentRotation = 0f
     private var position: LatLng = LatLng(-34.0, 151.0)
 
     override fun onCreateView(
@@ -60,9 +49,8 @@ class MapsFragment : Fragment(), SensorEventListener {
 
         venue = arguments?.getParcelable("venue")
             ?: throw IllegalStateException("Venue not found in arguments")
-
-        sensorManager = context?.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)!!
+        concert = arguments?.getParcelable("concert")
+            ?: throw IllegalStateException("Concert not found in arguments")
 
         speakersList = loadSpeakersFromJson()
 
@@ -74,12 +62,7 @@ class MapsFragment : Fragment(), SensorEventListener {
                 val location = LatLng(lineArray.location.latitude, lineArray.location.longitude)
                 val marker = gMap.addMarker(
                     MarkerOptions().position(location).title(lineArray.system.model)
-                        .icon(
-                            bitmapDescriptorFromVector(
-                                requireContext(),
-                                R.drawable.military_tech_24px
-                            )
-                        )
+                        .icon(bitmapDescriptorFromVector(requireContext(), R.drawable.military_tech_24px))
                 )
                 marker?.tag = lineArray
             }
@@ -88,9 +71,7 @@ class MapsFragment : Fragment(), SensorEventListener {
 
             gMap.setOnMarkerClickListener { marker ->
                 val lineArray = marker.tag as? LineArray
-                lineArray?.let {
-                    showEditLineArrayDialog(it, marker)
-                }
+                lineArray?.let { showEditLineArrayDialog(it, marker) }
                 true
             }
         }
@@ -102,9 +83,7 @@ class MapsFragment : Fragment(), SensorEventListener {
 
         mapFragment.getMapAsync(callback)
 
-        binding.addLineArrayButton.setOnClickListener {
-            showAddLineArrayDialog()
-        }
+        binding.addLineArrayButton.setOnClickListener { showAddLineArrayDialog() }
 
         return binding.root
     }
@@ -112,8 +91,7 @@ class MapsFragment : Fragment(), SensorEventListener {
     private fun showEditLineArrayDialog(lineArray: LineArray, marker: Marker) {
         val dialogBinding = DialogEditLineArrayBinding.inflate(LayoutInflater.from(context))
 
-        val speakerAdapter =
-            SpeakerAdapter(requireContext(), android.R.layout.simple_spinner_item, speakersList)
+        val speakerAdapter = SpeakerAdapter(requireContext(), android.R.layout.simple_spinner_item, speakersList)
         dialogBinding.speakerDropdown.adapter = speakerAdapter
 
         val currentSpeakerIndex = speakersList.indexOfFirst { it.model == lineArray.system.model }
@@ -126,18 +104,15 @@ class MapsFragment : Fragment(), SensorEventListener {
             .setView(dialogBinding.root)
             .setPositiveButton("Guardar") { _, _ ->
                 val selectedSpeaker = dialogBinding.speakerDropdown.selectedItem as Speaker
-                val newQuantity =
-                    dialogBinding.quantityInput.text.toString().toIntOrNull() ?: lineArray.quantity
+                val newQuantity = dialogBinding.quantityInput.text.toString().toIntOrNull() ?: lineArray.quantity
 
                 lineArray.system = selectedSpeaker
                 lineArray.quantity = newQuantity
-
                 marker.title = selectedSpeaker.model
 
                 saveLineArrayToFiles(lineArray)
 
-                Toast.makeText(requireContext(), "Line Array actualizado", Toast.LENGTH_SHORT)
-                    .show()
+                Toast.makeText(requireContext(), "Line Array actualizado", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Cancelar", null)
             .show()
@@ -146,8 +121,7 @@ class MapsFragment : Fragment(), SensorEventListener {
     private fun showAddLineArrayDialog() {
         val dialogBinding = DialogAddLineArrayBinding.inflate(LayoutInflater.from(context))
 
-        val speakerAdapter =
-            SpeakerAdapter(requireContext(), android.R.layout.simple_spinner_item, speakersList)
+        val speakerAdapter = SpeakerAdapter(requireContext(), android.R.layout.simple_spinner_item, speakersList)
         dialogBinding.speakerDropdown.adapter = speakerAdapter
 
         AlertDialog.Builder(requireContext())
@@ -173,45 +147,24 @@ class MapsFragment : Fragment(), SensorEventListener {
                 val markerOptions = MarkerOptions()
                     .position(LatLng(position.latitude, position.longitude))
                     .title(newLineArray.type)
-                    .icon(
-                        bitmapDescriptorFromVector(
-                            requireContext(),
-                            R.drawable.military_tech_24px
-                        )
-                    )
+                    .icon(bitmapDescriptorFromVector(requireContext(), R.drawable.military_tech_24px))
 
                 gMap.addMarker(markerOptions)
-                gMap.animateCamera(
-                    CameraUpdateFactory.newLatLngZoom(
-                        LatLng(
-                            position.latitude,
-                            position.longitude
-                        ), 15f
-                    )
-                )
+                gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(position.latitude, position.longitude), 15f))
             }
             .setNegativeButton("Cancelar", null)
             .show()
     }
 
-    private fun getCurrentLocation(): Location {
-        val location = Location("provider")
-        location.latitude = position.latitude
-        location.longitude = position.longitude
-        return location
-    }
-
     private fun saveLineArrayToFiles(lineArray: LineArray) {
         try {
             saveLineArrayToFile(lineArray)
-
             updateVenueInFile(venue, "venues.json")
             updateConcertInFile(venue, "concerts.json")
-
-            println("Los archivos se guardaron correctamente.")
+            Toast.makeText(requireContext(), "Archivos guardados correctamente", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             e.printStackTrace()
-            println("Error al guardar los archivos: ${e.message}")
+            Toast.makeText(requireContext(), "Error al guardar archivos: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -296,14 +249,16 @@ class MapsFragment : Fragment(), SensorEventListener {
         return gson.fromJson(reader, speakerType)
     }
 
+    private fun getCurrentLocation(): Location {
+        val location = Location("provider")
+        location.latitude = position.latitude
+        location.longitude = position.longitude
+        return location
+    }
+
     private fun bitmapDescriptorFromVector(context: Context, vectorResId: Int): BitmapDescriptor? {
         val vectorDrawable = ContextCompat.getDrawable(context, vectorResId)
-        vectorDrawable?.setBounds(
-            0,
-            0,
-            vectorDrawable.intrinsicWidth,
-            vectorDrawable.intrinsicHeight
-        )
+        vectorDrawable?.setBounds(0, 0, vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
         val bitmap = Bitmap.createBitmap(
             vectorDrawable!!.intrinsicWidth,
             vectorDrawable.intrinsicHeight,
@@ -312,49 +267,5 @@ class MapsFragment : Fragment(), SensorEventListener {
         val canvas = Canvas(bitmap)
         vectorDrawable.draw(canvas)
         return BitmapDescriptorFactory.fromBitmap(bitmap)
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event != null && event.sensor == rotationSensor) {
-            currentRotation = event.values[0] * 360
-        }
-        if (this::gMap.isInitialized) {
-            if (event!!.values[0] > 80) {
-                gMap.setMapStyle(
-                    context?.let { MapStyleOptions.loadRawResourceStyle(it, R.raw.map_day) })
-            } else {
-                gMap.setMapStyle(
-                    context?.let { MapStyleOptions.loadRawResourceStyle(it, R.raw.map_night) })
-            }
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
-    override fun onResume() {
-        super.onResume()
-        sensorManager.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_NORMAL)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        sensorManager.unregisterListener(this)
-    }
-
-    fun moveFunction(location: Location) {
-        position = LatLng(location.latitude, location.longitude)
-
-        if (positionMarker == null) {
-            positionMarker = gMap.addMarker(
-                MarkerOptions().position(position)
-                    .title("Tu ubicación")
-                    .icon(bitmapDescriptorFromVector(requireContext(), R.drawable.ic_position_marker))
-            )
-        } else {
-            positionMarker?.position = position
-            positionMarker?.zIndex = 10.0f
-        }
-
-        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel))
     }
 }

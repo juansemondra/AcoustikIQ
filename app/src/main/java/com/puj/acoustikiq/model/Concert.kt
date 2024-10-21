@@ -9,7 +9,7 @@ data class Concert(
     var name: String,
     var date: Date,
     var location: Location,
-    var venues: List<Venue>
+    var venues: MutableList<Venue>
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readString()!!,

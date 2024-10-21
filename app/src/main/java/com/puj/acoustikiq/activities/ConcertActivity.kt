@@ -16,6 +16,8 @@ import java.io.InputStreamReader
 import java.io.File
 import java.io.FileReader
 import java.util.Date
+import java.io.FileInputStream
+
 
 class ConcertActivity : AppCompatActivity() {
 
@@ -48,8 +50,13 @@ class ConcertActivity : AppCompatActivity() {
     }
 
     private fun loadConcertsFromJson(): List<Concert> {
-        val assetManager = assets
-        val inputStream = assetManager.open("concerts.json")
+        val concertsFile = File(filesDir, "concerts.json")
+
+        if (!concertsFile.exists()) {
+            throw Exception("El archivo concerts.json no existe en la memoria local.")
+        }
+
+        val inputStream = FileInputStream(concertsFile)
         val reader = InputStreamReader(inputStream)
 
         val gson = GsonBuilder()
@@ -57,6 +64,7 @@ class ConcertActivity : AppCompatActivity() {
             .create()
 
         val concertType = object : TypeToken<List<Concert>>() {}.type
+
         return gson.fromJson(reader, concertType)
     }
 

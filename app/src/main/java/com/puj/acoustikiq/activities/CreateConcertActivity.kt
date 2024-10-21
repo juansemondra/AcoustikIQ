@@ -111,30 +111,38 @@ class CreateConcertActivity : AppCompatActivity() {
 
         val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(dateStr)
 
-        val newConcert = Concert(name, date, currentLocation!!, emptyList())
+        val newConcert = date?.let { Concert(name, it, currentLocation!!, emptyList()) }
 
         val concerts = loadConcertsFromFile().toMutableList()
-        concerts.add(newConcert)
+
+        if (newConcert != null) {
+            concerts.add(newConcert)
+        }
 
         writeConcertsToFile(concerts)
         Toast.makeText(this, "Concierto creado exitosamente", Toast.LENGTH_SHORT).show()
+
         finish()
     }
 
     private fun loadConcertsFromFile(): List<Concert> {
         return try {
             val file = File(filesDir, concertsFileName)
+
             if (!file.exists()) {
-                return emptyList()
+                throw Exception("El archivo concerts.json no existe en el almacenamiento interno.")
             }
+
             val inputStream = file.inputStream()
             val reader = InputStreamReader(inputStream)
+
             val gson = GsonBuilder()
                 .registerTypeAdapter(Location::class.java, LocationAdapter())
                 .registerTypeAdapter(Date::class.java, DateTypeAdapter())
                 .create()
 
             val concertType = object : TypeToken<List<Concert>>() {}.type
+
             gson.fromJson(reader, concertType)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -145,14 +153,17 @@ class CreateConcertActivity : AppCompatActivity() {
     private fun writeConcertsToFile(concerts: List<Concert>) {
         try {
             val file = File(filesDir, concertsFileName)
+
             val outputStream = file.outputStream()
             val writer = OutputStreamWriter(outputStream)
+
             val gson = GsonBuilder()
                 .registerTypeAdapter(Location::class.java, LocationAdapter())
                 .registerTypeAdapter(Date::class.java, DateTypeAdapter())
                 .create()
 
             gson.toJson(concerts, writer)
+
             writer.flush()
             writer.close()
         } catch (e: Exception) {

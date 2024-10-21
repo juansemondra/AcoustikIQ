@@ -29,13 +29,14 @@ class VenueActivity : AppCompatActivity() {
         binding.venueRecyclerView.layoutManager = LinearLayoutManager(this)
         binding.venueRecyclerView.adapter = venueAdapter
 
-        binding.backButton.setOnClickListener(){
+        binding.backButton.setOnClickListener {
             val backIntent = Intent(this, ConcertActivity::class.java)
             startActivity(backIntent)
         }
 
-        binding.createVenueButton.setOnClickListener{
+        binding.createVenueButton.setOnClickListener {
             val venueIntent = Intent(this, CreateVenueActivity::class.java)
+            venueIntent.putExtra("concert", concert)
             startActivity(venueIntent)
         }
     }
@@ -47,11 +48,13 @@ class VenueActivity : AppCompatActivity() {
             .setPositiveButton("Editar") { _, _ ->
                 val editIntent = Intent(this, EditVenueActivity::class.java)
                 editIntent.putExtra("venue", venue)
+                editIntent.putExtra("concert", concert)
                 startActivity(editIntent)
             }
             .setNegativeButton("Abrir") { _, _ ->
                 val openIntent = Intent(this, OpenVenueActivity::class.java)
                 openIntent.putExtra("venue", venue)
+                openIntent.putExtra("concert", concert)
                 startActivity(openIntent)
             }
             .setNeutralButton("Cancelar", null)

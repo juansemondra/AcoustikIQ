@@ -13,12 +13,10 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
-import com.puj.acoustikiq.R
 import com.puj.acoustikiq.adapters.DateTypeAdapter
 import com.puj.acoustikiq.adapters.LocationAdapter
 import com.puj.acoustikiq.databinding.ActivityCreateVenueBinding
 import com.puj.acoustikiq.model.Concert
-import com.puj.acoustikiq.model.LineArray
 import com.puj.acoustikiq.model.Venue
 import com.puj.acoustikiq.util.Alerts
 import java.io.File
@@ -35,11 +33,15 @@ class CreateVenueActivity : AppCompatActivity() {
     private val REQUEST_LOCATION_PERMISSION = 1001
     private val alerts = Alerts(this)
     private val PERM_LOCATION_CODE = 303
+    private lateinit var concert: Concert
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCreateVenueBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        concert = intent.getParcelableExtra("concert")
+            ?: throw NullPointerException("Concert object is missing in intent")
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         getLocationPermission()
@@ -65,38 +67,21 @@ class CreateVenueActivity : AppCompatActivity() {
 
     @SuppressLint("SetTextI18n")
     private fun getCurrentLocation() {
-
-        when {
-            ContextCompat.checkSelfPermission(
+        if (ContextCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED -> {
-            }
+            ) == PackageManager.PERMISSION_GRANTED) {
 
-            shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) -> {
-                alerts.indefiniteSnackbar(
-                    binding.root,
-                    "El permiso de Localización es necesario para usar esta actividad."
-                )
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    currentLocation = location
+                    binding.locationTextView.text =
+                        "Latitud: ${location.latitude}, Longitud: ${location.longitude}, Altitud: ${location.altitude}"
+                } else {
+                    Toast.makeText(this, "No se pudo obtener la ubicación", Toast.LENGTH_SHORT).show()
+                }
+            }.addOnFailureListener {
+                Toast.makeText(this, "Error obteniendo la ubicación", Toast.LENGTH_SHORT).show()
             }
-
-            else -> {
-                requestPermissions(
-                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                    PERM_LOCATION_CODE
-                )
-            }
-        }
-
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
-                currentLocation = location
-                binding.locationTextView.text =
-                    "Latitud: ${location.latitude}, Longitud: ${location.longitude}, Altitud: ${location.altitude}"
-            } else {
-                Toast.makeText(this, "No se pudo obtener la ubicación", Toast.LENGTH_SHORT).show()
-            }
-        }.addOnFailureListener {
-            Toast.makeText(this, "Error obteniendo la ubicación", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -109,16 +94,19 @@ class CreateVenueActivity : AppCompatActivity() {
             return
         }
 
+        // Crear un nuevo Venue
         val newVenue = Venue(
             name = venueName,
             venueLineArray = mutableListOf(),
             temperature = temperature
         )
 
+        // Guardar el nuevo Venue en venues.json
         val venues = loadVenuesFromFile().toMutableList()
         venues.add(newVenue)
         writeVenuesToFile(venues)
 
+        // Actualizar el concierto con el nuevo Venue en concerts.json
         updateConcertWithVenue(newVenue)
 
         Toast.makeText(this, "Venue creado exitosamente", Toast.LENGTH_SHORT).show()
@@ -164,15 +152,16 @@ class CreateVenueActivity : AppCompatActivity() {
 
     private fun updateConcertWithVenue(newVenue: Venue) {
         val concerts = loadConcertsFromFile().toMutableList()
-        val selectedConcert = concerts.find { it.name == "Live at MSG" } // O usa otro criterio para seleccionar el concierto
+        val selectedConcert = concerts.find { it.name == concert.name }
 
         if (selectedConcert != null) {
             selectedConcert.venues = selectedConcert.venues.toMutableList().apply {
                 add(newVenue)
             }
+            writeConcertsToFile(concerts)
+        } else {
+            Toast.makeText(this, "Concierto no encontrado", Toast.LENGTH_SHORT).show()
         }
-
-        writeConcertsToFile(concerts)
     }
 
     private fun loadConcertsFromFile(): List<Concert> {
@@ -221,7 +210,7 @@ class CreateVenueActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_LOCATION_PERMISSION) {
-            if (grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 getCurrentLocation()
             } else {
                 Toast.makeText(this, "Permiso de ubicación denegado", Toast.LENGTH_SHORT).show()

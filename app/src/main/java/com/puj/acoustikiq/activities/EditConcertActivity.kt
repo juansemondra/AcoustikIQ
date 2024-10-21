@@ -1,12 +1,17 @@
 package com.puj.acoustikiq.activities
 
 import android.content.Intent
+import android.location.Location
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.puj.acoustikiq.databinding.ActivityEditConcertBinding
 import com.puj.acoustikiq.model.Concert
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
+import com.puj.acoustikiq.adapters.DateTypeAdapter
+import com.puj.acoustikiq.adapters.LocationAdapter
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
@@ -17,7 +22,9 @@ class EditConcertActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityEditConcertBinding
     private lateinit var concert: Concert
+    private lateinit var originalName: String
     private var concertsList: MutableList<Concert> = mutableListOf()
+    private val concertsFileName = "concerts.json"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +34,8 @@ class EditConcertActivity : AppCompatActivity() {
 
         concert = intent.getParcelableExtra("concert")
             ?: throw NullPointerException("Concert object is missing in intent")
+
+        originalName = concert.name
 
         loadConcertsFromJson()
 
@@ -40,40 +49,68 @@ class EditConcertActivity : AppCompatActivity() {
     }
 
     private fun loadConcertsFromJson() {
-        val concertsFile = File(filesDir, "concerts.json")
-        if (!concertsFile.exists()) return
+        val concertsFile = File(filesDir, concertsFileName)
+        if (!concertsFile.exists()) {
+            Toast.makeText(this, "El archivo de conciertos no existe", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-        val gson = Gson()
+        val gson = GsonBuilder()
+            .registerTypeAdapter(Location::class.java, LocationAdapter())
+            .registerTypeAdapter(Date::class.java, DateTypeAdapter())
+            .create()
+
         val concertType = object : TypeToken<MutableList<Concert>>() {}.type
         val reader = FileReader(concertsFile)
+
         concertsList = gson.fromJson(reader, concertType)
         reader.close()
     }
 
     private fun saveChanges() {
-        concert.name = binding.concertNameEditText.text.toString()
+        val newName = binding.concertNameEditText.text.toString()
+        if (newName.isEmpty()) {
+            Toast.makeText(this, "El nombre del concierto no puede estar vacío", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        val newDate = dateFormat.parse(binding.concertDateEditText.text.toString()) ?: concert.date
+        val newDate = try {
+            dateFormat.parse(binding.concertDateEditText.text.toString()) ?: concert.date
+        } catch (e: Exception) {
+            Toast.makeText(this, "Formato de fecha inválido", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        concert.name = newName
         concert.date = newDate
 
-        val concertIndex = concertsList.indexOfFirst { it.name == concert.name }
+        val concertIndex = concertsList.indexOfFirst { it.name == originalName }
         if (concertIndex != -1) {
             concertsList[concertIndex] = concert
         } else {
-            concertsList.add(concert)
+            Toast.makeText(this, "El concierto no fue encontrado", Toast.LENGTH_SHORT).show()
+            return
         }
 
         saveConcertsToJson()
 
+        Toast.makeText(this, "Concierto guardado exitosamente", Toast.LENGTH_SHORT).show()
+
         val concertIntent = Intent(this, ConcertActivity::class.java)
         startActivity(concertIntent)
+        finish()
     }
 
     private fun saveConcertsToJson() {
-        println("SAVE CONCERT TO JSON FUNC")
-        val concertsFile = File(getExternalFilesDir(null), "concerts.json")
-        val gson = Gson()
+        val concertsFile = File(filesDir, concertsFileName)
+
+        val gson = GsonBuilder()
+            .registerTypeAdapter(Location::class.java, LocationAdapter())
+            .registerTypeAdapter(Date::class.java, DateTypeAdapter())
+            .setPrettyPrinting()
+            .create()
+
         val jsonString = gson.toJson(concertsList)
 
         concertsFile.outputStream().use { outputStream ->

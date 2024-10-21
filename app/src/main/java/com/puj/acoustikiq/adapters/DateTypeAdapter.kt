@@ -3,11 +3,19 @@ package com.puj.acoustikiq.adapters
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 class DateTypeAdapter : TypeAdapter<Date>() {
+    private val dateFormat = SimpleDateFormat("MMM dd, yyyy hh:mm:ss a", Locale.getDefault())
+
     override fun write(out: JsonWriter, value: Date?) {
-        value?.let { out.value(it.time) } ?: out.nullValue()
+        if (value != null) {
+            out.value(dateFormat.format(value))
+        } else {
+            out.nullValue()
+        }
     }
 
     override fun read(input: JsonReader): Date? {
@@ -15,7 +23,8 @@ class DateTypeAdapter : TypeAdapter<Date>() {
             input.nextNull()
             null
         } else {
-            Date(input.nextLong())
+            val dateStr = input.nextString()
+            dateFormat.parse(dateStr)
         }
     }
 }

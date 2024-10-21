@@ -1,5 +1,6 @@
 package com.puj.acoustikiq.activities
 
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -10,6 +11,10 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.FirebaseApp
 import com.puj.acoustikiq.databinding.ActivityMainBinding
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
 
 class MainActivity : AppCompatActivity() {
     private lateinit var windowBinding: ActivityMainBinding
@@ -17,6 +22,10 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val REQUEST_CODE_MIC_PERMISSION = 1
+        const val CONCERTS_JSON = "concerts.json"
+        const val VENUES_JSON = "venues.json"
+        const val SPEAKERS_JSON = "speakers.json"
+        const val LINEARRAYS_JSON = "linearrays.json"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         FirebaseApp.initializeApp(this)
         auth = FirebaseAuth.getInstance()
 
-        //auth.signOut()
+        checkAndCopyJSONFiles()
 
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -99,8 +108,8 @@ class MainActivity : AppCompatActivity() {
         windowBinding.button10.setOnClickListener {
             if (auth.currentUser != null) {
                 println("BUTTON 10")
-            val intentButton10 = Intent(this, ProfileActivity::class.java)
-            startActivity(intentButton10)
+                val intentButton10 = Intent(this, ProfileActivity::class.java)
+                startActivity(intentButton10)
             } else {
                 Toast.makeText(this, "Tienes que hacer login primero", Toast.LENGTH_SHORT).show()
             }
@@ -114,6 +123,52 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, "Tienes que hacer login primero", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun checkAndCopyJSONFiles() {
+        val filesDir = this.filesDir
+
+        val concertsFile = File(filesDir, CONCERTS_JSON)
+        if (!concertsFile.exists()) {
+            copyAssetToInternalStorage(CONCERTS_JSON)
+        }
+
+        val venuesFile = File(filesDir, VENUES_JSON)
+        if (!venuesFile.exists()) {
+            copyAssetToInternalStorage(VENUES_JSON)
+        }
+
+        val speakersFile = File(filesDir, SPEAKERS_JSON)
+        if (!speakersFile.exists()) {
+            copyAssetToInternalStorage(SPEAKERS_JSON)
+        }
+
+        val lineArraysFile = File(filesDir, LINEARRAYS_JSON)
+        if (!lineArraysFile.exists()) {
+            copyAssetToInternalStorage(LINEARRAYS_JSON)
+        }
+    }
+
+    private fun copyAssetToInternalStorage(fileName: String) {
+        val assetManager = assets
+        try {
+            val inputStream: InputStream = assetManager.open(fileName)
+            val outFile = File(filesDir, fileName)
+            val outputStream = FileOutputStream(outFile)
+
+            val buffer = ByteArray(1024)
+            var read: Int
+            while (inputStream.read(buffer).also { read = it } != -1) {
+                outputStream.write(buffer, 0, read)
+            }
+
+            inputStream.close()
+            outputStream.flush()
+            outputStream.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
+            Toast.makeText(this, "Error copiando $fileName", Toast.LENGTH_SHORT).show()
         }
     }
 
