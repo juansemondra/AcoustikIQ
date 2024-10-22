@@ -94,19 +94,16 @@ class CreateVenueActivity : AppCompatActivity() {
             return
         }
 
-        // Crear un nuevo Venue
         val newVenue = Venue(
             name = venueName,
             venueLineArray = mutableListOf(),
             temperature = temperature
         )
 
-        // Guardar el nuevo Venue en venues.json
         val venues = loadVenuesFromFile().toMutableList()
         venues.add(newVenue)
         writeVenuesToFile(venues)
 
-        // Actualizar el concierto con el nuevo Venue en concerts.json
         updateConcertWithVenue(newVenue)
 
         Toast.makeText(this, "Venue creado exitosamente", Toast.LENGTH_SHORT).show()

@@ -111,8 +111,7 @@ class CreateConcertActivity : AppCompatActivity() {
 
         val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(dateStr)
 
-        val newConcert = date?.let { Concert(name, it, currentLocation!!, emptyList()) }
-
+        val newConcert = date?.let { Concert(name, it, currentLocation!!, mutableListOf()) }
         val concerts = loadConcertsFromFile().toMutableList()
 
         if (newConcert != null) {
