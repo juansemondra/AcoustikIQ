@@ -19,20 +19,18 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Observer
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
 import com.puj.acoustikiq.R
-import com.puj.acoustikiq.adapters.DateTypeAdapter
-import com.puj.acoustikiq.adapters.LocationAdapter
 import com.puj.acoustikiq.databinding.FragmentRouteBinding
 import com.puj.acoustikiq.model.Concert
 import com.puj.acoustikiq.util.Alerts
-import java.io.InputStreamReader
+import com.puj.acoustikiq.services.SharedViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -45,10 +43,10 @@ class RouteFragment : Fragment(), SensorEventListener {
     private var zoomLevel = 15f
     private lateinit var mapMarker: Marker
     private lateinit var polylineOptions: PolylineOptions
-    private var concerts: List<Concert> = listOf()
     private var selectedConcertLocation: LatLng? = null
-
     private var position: LatLng = LatLng(-34.0, 151.0)
+
+    private val viewModel: SharedViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -57,9 +55,9 @@ class RouteFragment : Fragment(), SensorEventListener {
         binding = FragmentRouteBinding.inflate(inflater, container, false)
         polylineOptions = PolylineOptions().width(5f).color(Color.RED).geodesic(true)
 
-        concerts = loadConcertsFromJSON()
-
-        setupConcertSpinner()
+        viewModel.concerts.observe(viewLifecycleOwner, Observer { concerts ->
+            setupConcertSpinner(concerts)
+        })
 
         val callback = OnMapReadyCallback { googleMap ->
             gMap = googleMap
@@ -81,15 +79,15 @@ class RouteFragment : Fragment(), SensorEventListener {
         lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)!!
 
         binding.navigateButton.setOnClickListener {
-            selectedConcertLocation?.let { location ->
-                openGoogleMapsForDirections(location)
+            selectedConcertLocation?.let { destination ->
+                openGoogleMapsForDirections(position, destination)
             }
         }
 
         return binding.root
     }
 
-    private fun setupConcertSpinner() {
+    private fun setupConcertSpinner(concerts: List<Concert>) {
         val dateFormat = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
         val concertNames = concerts.map { "${it.name} - ${dateFormat.format(it.date)}" }
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, concertNames)
@@ -108,8 +106,8 @@ class RouteFragment : Fragment(), SensorEventListener {
         }
     }
 
-    private fun openGoogleMapsForDirections(destination: LatLng) {
-        val uri = Uri.parse("google.navigation:q=${destination.latitude},${destination.longitude}")
+    private fun openGoogleMapsForDirections(start: LatLng, destination: LatLng) {
+        val uri = Uri.parse("https://www.google.com/maps/dir/?api=1&origin=${start.latitude},${start.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving")
         val intent = Intent(Intent.ACTION_VIEW, uri)
         intent.setPackage("com.google.android.apps.maps")
         if (intent.resolveActivity(requireActivity().packageManager) != null) {
@@ -122,25 +120,6 @@ class RouteFragment : Fragment(), SensorEventListener {
     private fun moveCameraToConcert(location: LatLng) {
         mapMarker.position = location
         gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location, zoomLevel))
-    }
-
-    private fun loadConcertsFromJSON(): List<Concert> {
-        val concerts = mutableListOf<Concert>()
-        try {
-            val gson = GsonBuilder()
-                .registerTypeAdapter(Location::class.java, LocationAdapter())
-                .registerTypeAdapter(Date::class.java, DateTypeAdapter())
-                .create()
-
-            val inputStream = requireContext().assets.open("concerts.json")
-            val reader = InputStreamReader(inputStream)
-
-            val concertType = object : TypeToken<List<Concert>>() {}.type
-            concerts.addAll(gson.fromJson(reader, concertType))
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return concerts
     }
 
     fun movePerson(location: Location) {

@@ -7,20 +7,28 @@ import android.os.Bundle
 import android.os.Looper
 import android.util.Log
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.commit
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
 import com.puj.acoustikiq.R
+import com.puj.acoustikiq.adapters.DateTypeAdapter
 import com.puj.acoustikiq.databinding.ActivityRouteBinding
 import com.puj.acoustikiq.fragments.RouteFragment
+import com.puj.acoustikiq.model.Concert
 import com.puj.acoustikiq.util.Alerts
+import com.puj.acoustikiq.services.SharedViewModel
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStreamReader
+import java.util.Date
 
 class RouteActivity : AppCompatActivity() {
 
@@ -30,12 +38,12 @@ class RouteActivity : AppCompatActivity() {
     private val PERM_LOCATION_CODE = 303
     private var alerts = Alerts(this)
     private lateinit var position: Location
-    private lateinit var fragment: RouteFragment
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
-    private var mapsFragment = RouteFragment()
+
+    private val viewModel: SharedViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,7 +84,8 @@ class RouteActivity : AppCompatActivity() {
             requestLocationPermission()
         }
 
-        fragment = supportFragmentManager.findFragmentById(R.id.googleMapsFragment) as RouteFragment
+        val concerts = loadConcerts()
+        viewModel.concerts.value = concerts
     }
 
     private fun checkLocationPermission(): Boolean {
@@ -97,11 +106,28 @@ class RouteActivity : AppCompatActivity() {
         val existingFragment = supportFragmentManager.findFragmentById(R.id.googleMapsFragment)
         if (existingFragment == null) {
             supportFragmentManager.commit {
-                replace(R.id.googleMapsFragment, mapsFragment)
+                replace(R.id.googleMapsFragment, RouteFragment())
             }
-        } else {
-            mapsFragment = existingFragment as RouteFragment
         }
+    }
+
+    private fun loadConcerts(): List<Concert> {
+        val concertsFile = File(filesDir, "concerts.json")
+
+        if (!concertsFile.exists()) {
+            throw Exception("El archivo concerts.json no existe en la memoria local.")
+        }
+
+        val inputStream = FileInputStream(concertsFile)
+        val reader = InputStreamReader(inputStream)
+
+        val gson = GsonBuilder()
+            .registerTypeAdapter(Date::class.java, DateTypeAdapter())
+            .create()
+
+        val concertType = object : TypeToken<List<Concert>>() {}.type
+
+        return gson.fromJson(reader, concertType)
     }
 
     override fun onRequestPermissionsResult(
@@ -117,7 +143,7 @@ class RouteActivity : AppCompatActivity() {
                 } else {
                     alerts.shortSimpleSnackbar(
                         binding.root,
-                        "Me acaban de negar los permisos de Localizacion 😭"
+                        "Me acaban de negar los permisos de Localización 😭"
                     )
                 }
             }
@@ -139,17 +165,8 @@ class RouteActivity : AppCompatActivity() {
 
                     binding.animationBeer.speed = (location.speed * 3.6F) / 8F
 
+                    val fragment = supportFragmentManager.findFragmentById(R.id.googleMapsFragment) as RouteFragment
                     fragment.movePerson(location)
-
-                    position = location
-
-                    fragment.drawPolyline(location)
-
-                    fragment.gMap.addMarker(
-                        MarkerOptions().position(LatLng(location.latitude, location.longitude)).title("Mi ubicación actual")
-                    )
-
-                    fragment.gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), 15f))
                 }
             }
         }
