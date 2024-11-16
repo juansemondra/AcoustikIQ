@@ -1,71 +1,72 @@
 package com.puj.acoustikiq.activities
 
-import com.puj.acoustikiq.adapters.ConcertAdapter
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
-import com.puj.acoustikiq.adapters.DateTypeAdapter
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.*
+import com.puj.acoustikiq.adapters.ConcertAdapter
 import com.puj.acoustikiq.databinding.ActivityConcertBinding
 import com.puj.acoustikiq.model.Concert
-import java.io.InputStreamReader
-import java.io.File
-import java.io.FileReader
-import java.util.Date
-import java.io.FileInputStream
-
+import com.puj.acoustikiq.util.Alerts
+import java.io.Serializable
 
 class ConcertActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityConcertBinding
     private lateinit var concertAdapter: ConcertAdapter
-    private var concertList: List<Concert> = listOf()
+    private var concertList: MutableList<Concert> = mutableListOf()
+    private lateinit var database: DatabaseReference
+    private lateinit var userId: String
+    private val alerts = Alerts(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityConcertBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        concertList = loadConcertsFromJson()
+        userId = FirebaseAuth.getInstance().currentUser?.uid ?: throw Exception("Usuario no autenticado")
+        database = FirebaseDatabase.getInstance().getReference("concerts/users/$userId")
 
+        setupRecyclerView()
+        loadConcertsFromFirebase()
+
+        binding.backButton.setOnClickListener {
+            startActivity(Intent(this, MenuActivity::class.java))
+        }
+
+        binding.createConcertButton.setOnClickListener {
+            startActivity(Intent(this, CreateConcertActivity::class.java))
+        }
+    }
+
+    private fun setupRecyclerView() {
         concertAdapter = ConcertAdapter(concertList, ::onConcertClick)
         binding.concertRecyclerView.layoutManager = LinearLayoutManager(this)
         binding.concertRecyclerView.adapter = concertAdapter
-
-        binding.backButton.setOnClickListener(){
-            val backIntent = Intent(this, MainActivity::class.java)
-            startActivity(backIntent)
-        }
-
-        binding.createConcertButton.setOnClickListener{
-            val concertIntent = Intent(this, CreateConcertActivity::class.java)
-            startActivity(concertIntent)
-        }
-        
     }
 
-    private fun loadConcertsFromJson(): List<Concert> {
-        val concertsFile = File(filesDir, "concerts.json")
+    private fun loadConcertsFromFirebase() {
+        database.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                concertList.clear()
+                for (concertSnapshot in snapshot.children) {
+                    val concert = concertSnapshot.getValue(Concert::class.java)
+                    concert?.let {
+                        it.id = concertSnapshot.key ?: ""
+                        concertList.add(it)
+                    }
+                }
+                concertAdapter.notifyDataSetChanged()
+            }
 
-        if (!concertsFile.exists()) {
-            throw Exception("El archivo concerts.json no existe en la memoria local.")
-        }
-
-        val inputStream = FileInputStream(concertsFile)
-        val reader = InputStreamReader(inputStream)
-
-        val gson = GsonBuilder()
-            .registerTypeAdapter(Date::class.java, DateTypeAdapter())
-            .create()
-
-        val concertType = object : TypeToken<List<Concert>>() {}.type
-
-        return gson.fromJson(reader, concertType)
+            override fun onCancelled(error: DatabaseError) {
+                alerts.showErrorDialog("Error al cargar conciertos", error.message)
+            }
+        })
     }
 
     private fun onConcertClick(concert: Concert) {

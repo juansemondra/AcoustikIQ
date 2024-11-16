@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.puj.acoustikiq.R
-import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PERMISSION
+import com.puj.acoustikiq.activities.MenuActivity.Companion.REQUEST_CODE_MIC_PERMISSION
 import com.puj.acoustikiq.databinding.ActivityLevelMeterBinding
 import com.puj.acoustikiq.fragments.LevelMeterFragment
 
@@ -33,7 +33,7 @@ class LevelMeterActivity : AppCompatActivity() {
         }
 
         levelMeterBinding.backButton.setOnClickListener(){
-            val intentBack = Intent(this, MainActivity::class.java)
+            val intentBack = Intent(this, MenuActivity::class.java)
             startActivity(intentBack)
         }
     }

@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/md_theme_background"
-    tools:context=".activities.LoginActivity">
+    tools:context=".activities.MainActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/top_bar"
@@ -64,12 +64,14 @@
                 android:id="@+id/animationView"
                 android:layout_width="match_parent"
                 android:layout_height="300dp"
+                android:layout_marginTop="40dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:lottie_autoPlay="true"
                 app:lottie_loop="true"
-                app:lottie_rawRes="@raw/login_animation"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                app:lottie_rawRes="@raw/loading_animation" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/loginEmail"

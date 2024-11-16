@@ -32,7 +32,7 @@ class ConcertAdapter(
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         holder.binding.concertDateTextView.text = "Date: ${dateFormat.format(concert.date)}"
 
-        holder.binding.concertLocationTextView.text = "Location: ${concert.location.latitude}, ${concert.location.longitude}"
+        holder.binding.concertLocationTextView.text = "Location: ${concert.location?.latitude}, ${concert.location?.longitude}"
 
         val venueAdapter = VenueAdapter(concert.venues) { venue ->
 

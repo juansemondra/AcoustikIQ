@@ -8,45 +8,30 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.bumptech.glide.Glide
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DatabaseReference
 import com.google.firebase.storage.FirebaseStorage
 import com.puj.acoustikiq.R
 import com.puj.acoustikiq.databinding.ActivityProfileBinding
-import com.puj.acoustikiq.model.UserProfile
-import com.puj.acoustikiq.util.Alerts
-import com.google.firebase.database.FirebaseDatabase
 import java.io.File
 import java.util.Date
 
-class ProfileActivity : AppCompatActivity() {
+class ProfileActivity : AuthorizedActivity() {
     private lateinit var binding: ActivityProfileBinding
-
-    private var auth: FirebaseAuth = FirebaseAuth.getInstance()
-    protected var currentUser = auth.currentUser
-    protected lateinit var user: UserProfile
-    protected lateinit var refData: DatabaseReference
     private val storage = FirebaseStorage.getInstance()
     private val refProfileImg = storage.reference.child("users/${currentUser?.uid}/profile.jpg")
 
     private val PERM_CAMERA_CODE = 101
     private val REQUEST_IMAGE_CAPTURE = 10
-    private val PERM_GALERY_GROUP_CODE = 202
+    private val PERM_GALLERY_GROUP_CODE = 202
     private val REQUEST_PICK = 3
-    private val alerts = Alerts(this)
     private lateinit var outputPath: Uri
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         binding = ActivityProfileBinding.inflate(layoutInflater)
         setContentView(binding.root)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -55,137 +40,69 @@ class ProfileActivity : AppCompatActivity() {
             insets
         }
 
-        currentUser?.let {
-            refData = FirebaseDatabase.getInstance().getReference("users/${it.uid}")
+        binding.profilePhotoBtn.setOnClickListener { requestCameraPermission() }
+        binding.profileGalleryBtn.setOnClickListener { startGallery() }
+        binding.profileButton.setOnClickListener { updateProfile() }
+        binding.backButton.setOnClickListener {
+            startActivity(Intent(this, MenuActivity::class.java))
         }
 
-        binding.profilePhotoBtn.setOnClickListener {
-            when {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.CAMERA
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    takePhoto()
-                }
+        loadUserData { populateProfileData() }
+    }
 
-                shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -> {
-                    alerts.indefiniteSnackbar(
-                        binding.root,
-                        "El permiso de Camara es necesario para usar esta actividad 😭"
-                    )
-                }
+    private fun populateProfileData() {
+        binding.profileName.editText?.setText(user.name)
+        binding.profilePhone.editText?.setText(user.phone)
+        Glide.with(this)
+            .load(refProfileImg)
+            .centerCrop()
+            .placeholder(R.drawable.baseline_face_24)
+            .into(binding.profileImage)
+    }
 
-                else -> {
-                    requestPermissions(arrayOf(Manifest.permission.CAMERA), PERM_CAMERA_CODE)
-                }
+    private fun requestCameraPermission() {
+        when {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED -> {
+                takePhoto()
             }
-        }
-        binding.profileGalleryBtn.setOnClickListener {
-            startGallery()
-        }
-
-        binding.profileButton.setOnClickListener {
-            updateProfile()
-        }
-
-        binding.backButton.setOnClickListener(){
-            val backIntent = Intent(this, MainActivity::class.java)
-            startActivity(backIntent)
-        }
-    }
-
-    private fun getUserData() {
-        refData.get().addOnSuccessListener { data ->
-            val tmpUser = data.getValue(UserProfile::class.java)
-            binding.profileName.editText?.setText(tmpUser?.name)
-            binding.profilePhone.editText?.setText(tmpUser?.phone)
-            if (!this::outputPath.isInitialized)
-                Glide.with(this)
-                    .load(refProfileImg)
-                    .centerCrop()
-                    .placeholder(R.drawable.baseline_face_24)
-                    .into(binding.profileImage)
-            user = tmpUser!!
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        getUserData()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        getUserData()
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            PERM_CAMERA_CODE -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    takePhoto()
-                } else {
-                    alerts.shortSimpleSnackbar(
-                        binding.root,
-                        "Me acaban de negar los permisos de Camara 😭"
-                    )
-                }
+            shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -> {
+                alerts.indefiniteSnackbar(binding.root, "El permiso de Cámara es necesario para usar esta actividad.")
             }
-
-            PERM_GALERY_GROUP_CODE -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    startGallery()
-                } else {
-                    alerts.shortSimpleSnackbar(
-                        binding.root,
-                        "Me acaban de negar los permisos de Galeria 😭"
-                    )
-                }
+            else -> {
+                requestPermissions(arrayOf(Manifest.permission.CAMERA), PERM_CAMERA_CODE)
             }
         }
     }
 
     private fun startGallery() {
-        val intentPick = Intent(Intent.ACTION_PICK)
-        intentPick.type = "image/*"
+        val intentPick = Intent(Intent.ACTION_PICK).apply { type = "image/*" }
         startActivityForResult(intentPick, REQUEST_PICK)
     }
 
     private fun takePhoto() {
         val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         val imageFileName = "${Date()}.jpg"
-        val imageFile =
-            File(getExternalFilesDir(Environment.DIRECTORY_PICTURES).toString() + "/" + imageFileName)
-        outputPath = FileProvider.getUriForFile(
-            this,
-            "com.example.android.fileprovider",
-            imageFile
-        )
+        val imageFile = File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), imageFileName)
+        outputPath = FileProvider.getUriForFile(this, "com.puj.acoustikiq.fileprovider", imageFile)
         takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, outputPath)
         try {
             startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
         } catch (e: ActivityNotFoundException) {
-            e.localizedMessage?.let { alerts.indefiniteSnackbar(binding.root, it) }
+            alerts.showErrorDialog("Error", e.localizedMessage ?: "No se pudo abrir la cámara.")
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == RESULT_OK) {
-            Glide.with(this)
-                .clear(binding.profileImage)
+            Glide.with(this).clear(binding.profileImage)
             when (requestCode) {
                 REQUEST_IMAGE_CAPTURE -> {
-                    alerts.shortSimpleSnackbar(binding.root, "Foto tomada correctamente")
+                    alerts.shortSimpleSnackbar(binding.root, "Foto tomada correctamente.")
                 }
                 REQUEST_PICK -> {
                     outputPath = data?.data ?: outputPath
-                    alerts.shortSimpleSnackbar(binding.root, "Imagen seleccionada correctamente")
+                    alerts.shortSimpleSnackbar(binding.root, "Imagen seleccionada correctamente.")
                 }
             }
             Glide.with(this)
@@ -196,80 +113,42 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
-    fun validate(): Boolean {
-        if (binding.profileName.editText?.text.toString().isEmpty()) {
-            binding.profileName.error = "El nombre es requerido"
-            return false
-        }
-        if (binding.profilePhone.editText?.text.toString().isEmpty()) {
-            binding.profilePhone.error = "El telefono es requerido"
-            return false
-        }
-        return true
+    private fun validate(): Boolean {
+        val nameValid = binding.profileName.editText?.text?.isNotEmpty() == true
+        val phoneValid = binding.profilePhone.editText?.text?.isNotEmpty() == true
+
+        binding.profileName.error = if (!nameValid) "El nombre es requerido." else null
+        binding.profilePhone.error = if (!phoneValid) "El teléfono es requerido." else null
+
+        return nameValid && phoneValid
     }
 
-    fun updateProfile() {
+    private fun updateProfile() {
         if (validate()) {
             disableFields()
             user.name = binding.profileName.editText?.text.toString()
             user.phone = binding.profilePhone.editText?.text.toString()
             refData.setValue(user).addOnCompleteListener {
-                if (outputPath != null) {
-                    refProfileImg.putFile(outputPath).addOnCompleteListener {
-                        enableFields()
-                        alerts.shortSimpleSnackbar(binding.root, "Perfil actualizado correctamente")
-                    }.addOnFailureListener {
-                        enableFields()
-                        it.localizedMessage?.let {
-                            alerts.showErrorDialog(
-                                "Error al actualizar la foto de perfil",
-                                it
-                            )
-                        }
-                    }
-                } else {
-                    if (binding.profilePass.editText?.text.toString().isNotEmpty()) {
-                        MaterialAlertDialogBuilder(this)
-                            .setTitle("Cambio de Contraseña")
-                            .setMessage("Esta seguro de cambiar la contraseña?")
-                            .setPositiveButton("Si") { dialog, _ ->
-                                currentUser?.updatePassword(binding.profilePass.editText?.text.toString())
-                                    ?.addOnFailureListener { err ->
-                                        enableFields()
-                                        err.localizedMessage?.let {
-                                            alerts.showErrorDialog(
-                                                "Error al actualizar la contraseña",
-                                                it
-                                            )
-                                        }
-                                    }?.addOnSuccessListener { task ->
-                                        enableFields()
-                                        alerts.shortSimpleSnackbar(
-                                            binding.root,
-                                            "Perfil y contraseña actualizados correctamente"
-                                        )
-                                        finish()
-                                    }
-                            }.setNegativeButton("No") { dialog, _ ->
-                                enableFields()
-                                dialog.dismiss()
-                            }
-                            .show()
-                    } else {
-                        enableFields()
-                        alerts.shortSimpleSnackbar(binding.root, "Perfil actualizado correctamente")
-                        finish()
-                    }
-                }
+                uploadProfileImageIfNeeded()
             }.addOnFailureListener {
                 enableFields()
-                it.localizedMessage?.let {
-                    alerts.showErrorDialog(
-                        "Error al actualizar los datos",
-                        it
-                    )
-                }
+                alerts.showErrorDialog("Error", "No se pudo actualizar el perfil.")
             }
+        }
+    }
+
+    private fun uploadProfileImageIfNeeded() {
+        if (this::outputPath.isInitialized) {
+            refProfileImg.putFile(outputPath).addOnCompleteListener {
+                enableFields()
+                alerts.shortSimpleSnackbar(binding.root, "Perfil actualizado correctamente.")
+            }.addOnFailureListener {
+                enableFields()
+                alerts.showErrorDialog("Error", "No se pudo actualizar la foto de perfil.")
+            }
+        } else {
+            enableFields()
+            alerts.shortSimpleSnackbar(binding.root, "Perfil actualizado correctamente.")
         }
     }
 
@@ -288,5 +167,6 @@ class ProfileActivity : AppCompatActivity() {
         binding.profilePhone.isEnabled = true
         binding.profilePhotoBtn.isEnabled = true
         binding.profileGalleryBtn.isEnabled = true
+        binding.profileButton.isEnabled = true
     }
 }

@@ -29,7 +29,7 @@ class GalleryActivity : AppCompatActivity() {
         }.attach()
 
         binding.backButton.setOnClickListener(){
-            val backIntent = Intent(this, MainActivity::class.java)
+            val backIntent = Intent(this, MenuActivity::class.java)
             startActivity(backIntent)
         }
 

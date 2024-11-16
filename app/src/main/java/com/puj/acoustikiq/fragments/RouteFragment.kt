@@ -98,7 +98,8 @@ class RouteFragment : Fragment(), SensorEventListener {
         binding.concertSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 val selectedConcert = concerts[position]
-                selectedConcertLocation = LatLng(selectedConcert.location.latitude, selectedConcert.location.longitude)
+                selectedConcertLocation =
+                    selectedConcert.location?.let { LatLng(it.latitude, selectedConcert.location!!.longitude) }
                 moveCameraToConcert(selectedConcertLocation!!)
             }
 

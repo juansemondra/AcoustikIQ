@@ -8,7 +8,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.activity.enableEdgeToEdge
@@ -17,195 +16,161 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
-import com.google.firebase.database.database
-import com.google.firebase.storage.storage
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import com.puj.acoustikiq.R
 import com.puj.acoustikiq.databinding.ActivityRegisterBinding
+import com.puj.acoustikiq.model.UserProfile
 import com.puj.acoustikiq.util.Alerts
 import java.io.File
-import java.util.Date
-import com.puj.acoustikiq.R
-import com.puj.acoustikiq.model.UserProfile
 
 class RegisterActivity : AppCompatActivity() {
     private lateinit var binding: ActivityRegisterBinding
-    val TAG = RegisterActivity::class.java.simpleName
+    private val TAG = RegisterActivity::class.java.simpleName
 
     private val auth = Firebase.auth
     private val database = Firebase.database
     private val storage = Firebase.storage
 
-    private var alerts = Alerts(this)
+    private val alerts = Alerts(this)
 
     private val PERM_CAMERA_CODE = 101
     private val REQUEST_IMAGE_CAPTURE = 10
-    private val PERM_GALERY_GROUP_CODE = 202
+    private val PERM_GALLERY_CODE = 202
     private val REQUEST_PICK = 3
     private var userPhotoPath: Uri? = null
-
-    private var isLoading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_register)
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        checkCameraPermission()
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
-        binding.signupButton.setOnClickListener {
-            signUp()
-        }
-        binding.regPhotoBtn.setOnClickListener() {
-            when {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.CAMERA
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    takePhoto()
-                }
-
-                shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -> {
-                    alerts.indefiniteSnackbar(
-                        binding.root,
-                        "El permiso de Camara es necesario para usar esta actividad 😭"
-                    )
-                }
-
-                else -> {
-                    requestPermissions(arrayOf(Manifest.permission.CAMERA), PERM_CAMERA_CODE)
-                }
-            }
-        }
-        binding.regGalleryBtn.setOnClickListener() {
-            startGallery()
-        }
-
-        binding.backButton.setOnClickListener(){
-            val backIntent = Intent(this, MainActivity::class.java)
-            startActivity(backIntent)
+        binding.signupButton.setOnClickListener { signUp() }
+        binding.regPhotoBtn.setOnClickListener { takePhoto() }
+        binding.regGalleryBtn.setOnClickListener { startGallery() }
+        binding.backButton.setOnClickListener {
+            startActivity(Intent(this, MenuActivity::class.java))
         }
     }
 
-    private fun validateFields(): Boolean {
-        if (binding.signupEmail.editText?.text.toString().isEmpty() ||
-            !android.util.Patterns.EMAIL_ADDRESS.matcher(binding.signupEmail.editText?.text.toString())
-                .matches()
-        ) {
-            binding.signupEmail.error = getString(R.string.mail_error_label)
-            return false
-        } else binding.signupEmail.isErrorEnabled = false
-        // Validate password
-        if (binding.signupPass.editText?.text.toString().isEmpty()) {
-            binding.signupPass.error = getString(R.string.error_pass_label)
-            return false
-        } else binding.signupPass.isErrorEnabled = false
-        // Validate name
-        if (binding.signupName.editText?.text.toString().isEmpty()) {
-            binding.signupName.error = getString(R.string.error_name_label)
-            return false
-        } else binding.signupName.isErrorEnabled = false
-        // Validate phone
-        if (binding.signupPhone.editText?.text.toString().isEmpty()) {
-            binding.signupPhone.error = getString(R.string.error_phone_label)
-            return false
-        } else binding.signupPhone.isErrorEnabled = false
-        if (userPhotoPath != null) {
-            val refStorage = storage.reference.child("users/${auth.currentUser?.uid}/profile.jpg")
-            refStorage.putFile(userPhotoPath!!)
-                .addOnCompleteListener { _ ->
-                    val refDatabase = database.getReference("users/${auth.currentUser?.uid}")
-                    val user = UserProfile(
-                        binding.signupName.editText?.text.toString(),
-                        binding.signupPhone.editText?.text.toString()
-                    )
-                    refDatabase.setValue(user)
-                        .addOnCompleteListener {
-                            startActivity(Intent(this, MainActivity::class.java))
-                        }
-                        .addOnFailureListener { err ->
-                            enableFields()
-                            err.localizedMessage?.let {
-                                alerts.showErrorDialog("Error al guardar el usuario", it)
-                            }
-                        }
-                }.addOnFailureListener {
-                    enableFields()
-                    it.localizedMessage?.let {
-                        alerts.showErrorDialog("Error al guardar la foto de usuario", it)
-                    }
-                }
-        } else {
-            alerts.showErrorDialog("Error al subir la foto", "La URI de la imagen es nula.")
+    private fun checkCameraPermission() {
+        when {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED -> {
+            }
+            shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -> {
+                alerts.indefiniteSnackbar(binding.root, "El permiso de cámara es necesario para usar esta actividad.")
+            }
+            else -> {
+                requestPermissions(arrayOf(Manifest.permission.CAMERA), PERM_CAMERA_CODE)
+            }
         }
-
-        return true
     }
 
     private fun signUp() {
         if (validateFields()) {
             disableFields()
-            auth.createUserWithEmailAndPassword(
-                binding.signupEmail.editText?.text.toString(),
-                binding.signupPass.editText?.text.toString()
-            ).addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    // Sign in success, update UI with the signed-in user's information
-                    val refStorage =
-                        storage.reference.child("users/${Firebase.auth.currentUser?.uid}/profile.jpg")
-                    refStorage.putFile(userPhotoPath!!)
-                        .addOnCompleteListener { _ ->
-                            val refDatabase =
-                                database.getReference("users/${Firebase.auth.currentUser?.uid}")
-                            val user = UserProfile(
-                                binding.signupName.editText?.text.toString(),
-                                binding.signupPhone.editText?.text.toString()
-                            )
-                            refDatabase.setValue(user)
-                                .addOnCompleteListener {
-                                    startActivity(Intent(this, MainActivity::class.java))
-                                }
-                                .addOnFailureListener { err ->
-                                    enableFields()
-                                    err.localizedMessage?.let {
-                                        alerts.showErrorDialog("Error al guardar el usuario", it)
+            val email = binding.signupEmail.editText?.text.toString()
+            val password = binding.signupPass.editText?.text.toString()
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val uid = auth.currentUser?.uid ?: return@addOnCompleteListener
+                        val storageRef = storage.reference.child("users/$uid/profile.jpg")
+
+                        if (userPhotoPath != null) {
+                            val localFile = File(userPhotoPath!!.path!!)
+                            if (localFile.exists()) {
+                                storageRef.putFile(userPhotoPath!!)
+                                    .addOnSuccessListener {
+                                        storageRef.downloadUrl.addOnSuccessListener { downloadUri ->
+                                            saveUserProfile(downloadUri.toString())
+                                        }.addOnFailureListener { error ->
+                                            enableFields()
+                                            alerts.showErrorDialog(
+                                                "Error al obtener la URL de descarga",
+                                                error.localizedMessage ?: "Error desconocido"
+                                            )
+                                        }
                                     }
-                                }
-                        }.addOnFailureListener {
-                            enableFields()
-                            it.localizedMessage?.let {
-                                alerts.showErrorDialog("Error al guardar la foto de usuario", it)
+                                    .addOnFailureListener { error ->
+                                        enableFields()
+                                        alerts.showErrorDialog(
+                                            "Error al subir la imagen",
+                                            error.localizedMessage ?: "Error desconocido"
+                                        )
+                                    }
+                            } else {
+                                enableFields()
+                                alerts.showErrorDialog("Error", "El archivo local no existe.")
                             }
+                        } else {
+                            enableFields()
+                            alerts.showErrorDialog("Error", "No se seleccionó ninguna foto para subir.")
                         }
-                } else {
-                    enableFields()
-                    task.exception?.localizedMessage?.let {
-                        alerts.showErrorDialog("Error al crear el usuario", it)
+                    } else {
+                        enableFields()
+                        alerts.showErrorDialog(
+                            "Error al crear el usuario",
+                            task.exception?.localizedMessage ?: "Error desconocido"
+                        )
                     }
                 }
-            }
         }
     }
 
+    private fun saveUserProfile(photoUrl: String) {
+        val uid = auth.currentUser?.uid ?: return
+        val userProfile = UserProfile(
+            name = binding.signupName.editText?.text.toString(),
+            phone = binding.signupPhone.editText?.text.toString(),
+            photoUrl = photoUrl
+        )
+
+        database.reference.child("users/$uid").setValue(userProfile)
+            .addOnCompleteListener {
+                startActivity(Intent(this, MenuActivity::class.java))
+                finish()
+            }
+            .addOnFailureListener { error ->
+                enableFields()
+                alerts.showErrorDialog(
+                    "Error al guardar el perfil",
+                    error.localizedMessage ?: "Error desconocido"
+                )
+            }
+    }
+
     private fun takePhoto() {
-        val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         val imageFileName = "JPEG_${System.currentTimeMillis()}.jpg"
-        val imageFile = File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), imageFileName)
+        val storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        val imageFile = File(storageDir, imageFileName)
+
         userPhotoPath = FileProvider.getUriForFile(
             this,
             "com.puj.acoustikiq.fileprovider",
             imageFile
         )
-        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, userPhotoPath)
+
+        val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+            putExtra(MediaStore.EXTRA_OUTPUT, userPhotoPath)
+        }
+
         try {
             startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
         } catch (e: ActivityNotFoundException) {
-            e.localizedMessage?.let { alerts.showErrorDialog("Error al tomar la foto", it) }
+            alerts.showErrorDialog("Error al tomar la foto", e.localizedMessage ?: "Error desconocido")
         }
     }
 
@@ -215,33 +180,18 @@ class RegisterActivity : AppCompatActivity() {
         startActivityForResult(intentPick, REQUEST_PICK)
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
             PERM_CAMERA_CODE -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    takePhoto()
                 } else {
-                    alerts.shortSimpleSnackbar(
-                        binding.root,
-                        "Me acaban de negar los permisos de Camara 😭"
-                    )
+                    alerts.shortSimpleSnackbar(binding.root, "Permiso de cámara denegado.")
                 }
             }
-
-            PERM_GALERY_GROUP_CODE -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    startGallery()
-                } else {
-                    alerts.shortSimpleSnackbar(
-                        binding.root,
-                        "Me acaban de negar los permisos de Galeria 😭"
-                    )
-                }
+            PERM_GALLERY_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) startGallery()
+                else alerts.shortSimpleSnackbar(binding.root, "Permiso de galería denegado.")
             }
         }
     }
@@ -251,45 +201,62 @@ class RegisterActivity : AppCompatActivity() {
         when (requestCode) {
             REQUEST_IMAGE_CAPTURE -> {
                 if (resultCode == RESULT_OK) {
-                    alerts.shortSimpleSnackbar(binding.root, "Foto tomada correctamente")
-                    Log.d(TAG, "onActivityResult: ${userPhotoPath.toString()}")
-                    binding.materialCardView.removeAllViews()
-                    val imageView = ImageView(this)
-                    imageView.layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.MATCH_PARENT
-                    )
-                    imageView.setImageURI(userPhotoPath)
-                    imageView.scaleType = ImageView.ScaleType.CENTER_CROP
-                    imageView.adjustViewBounds = true
-                    binding.materialCardView.addView(imageView)
+                    displaySelectedImage(userPhotoPath)
                 } else {
-                    alerts.shortSimpleSnackbar(binding.root, "No se pudo tomar la foto")
+                    alerts.shortSimpleSnackbar(binding.root, "No se pudo tomar la foto.")
                 }
             }
-
             REQUEST_PICK -> {
                 if (resultCode == RESULT_OK) {
-                    alerts.shortSimpleSnackbar(
-                        binding.root,
-                        "Se selecciono un archivo de la galeria"
-                    )
-                    if (data != null) {
-                        userPhotoPath = data.data
-                        binding.materialCardView.removeAllViews()
-                        val imageView = ImageView(this)
-                        imageView.layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.MATCH_PARENT
-                        )
-                        imageView.setImageURI(userPhotoPath)
-                        imageView.scaleType = ImageView.ScaleType.CENTER_CROP
-                        imageView.adjustViewBounds = true
-                        binding.materialCardView.addView(imageView)
-                    }
+                    userPhotoPath = data?.data
+                    displaySelectedImage(userPhotoPath)
                 }
             }
         }
+    }
+
+    private fun displaySelectedImage(imageUri: Uri?) {
+        binding.materialCardView.removeAllViews()
+        val imageView = ImageView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT)
+            setImageURI(imageUri)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            adjustViewBounds = true
+        }
+        binding.materialCardView.addView(imageView)
+    }
+
+    private fun validateFields(): Boolean {
+        var isValid = true
+
+        if (binding.signupEmail.editText?.text.toString().isEmpty() ||
+            !android.util.Patterns.EMAIL_ADDRESS.matcher(binding.signupEmail.editText?.text.toString()).matches()
+        ) {
+            binding.signupEmail.error = getString(R.string.mail_error_label)
+            isValid = false
+        } else binding.signupEmail.isErrorEnabled = false
+
+        if (binding.signupPass.editText?.text.toString().isEmpty()) {
+            binding.signupPass.error = getString(R.string.error_pass_label)
+            isValid = false
+        } else binding.signupPass.isErrorEnabled = false
+
+        if (binding.signupName.editText?.text.toString().isEmpty()) {
+            binding.signupName.error = getString(R.string.error_name_label)
+            isValid = false
+        } else binding.signupName.isErrorEnabled = false
+
+        if (binding.signupPhone.editText?.text.toString().isEmpty()) {
+            binding.signupPhone.error = getString(R.string.error_phone_label)
+            isValid = false
+        } else binding.signupPhone.isErrorEnabled = false
+
+        if (userPhotoPath == null) {
+            alerts.showErrorDialog("Error", "Es obligatorio seleccionar una foto de perfil.")
+            isValid = false
+        }
+
+        return isValid
     }
 
     private fun disableFields() {

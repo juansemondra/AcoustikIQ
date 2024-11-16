@@ -1,7 +1,6 @@
 package com.puj.acoustikiq.activities
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
@@ -11,17 +10,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
-import com.puj.acoustikiq.R
-import com.puj.acoustikiq.adapters.DateTypeAdapter
-import com.puj.acoustikiq.adapters.LocationAdapter
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.puj.acoustikiq.databinding.ActivityCreateConcertBinding
 import com.puj.acoustikiq.model.Concert
-import com.puj.acoustikiq.util.Alerts
-import java.io.File
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
+import com.puj.acoustikiq.model.Position
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -30,10 +24,12 @@ class CreateConcertActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCreateConcertBinding
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var currentLocation: Location? = null
-    private val concertsFileName = "concerts.json"
     private val REQUEST_LOCATION_PERMISSION = 1001
-    private val alerts = Alerts(this)
-    private val PERM_LOCATION_CODE = 303
+
+    private val auth = FirebaseAuth.getInstance()
+    private val database: DatabaseReference by lazy {
+        FirebaseDatabase.getInstance().getReference("concerts/users/${auth.currentUser?.uid}")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,18 +58,25 @@ class CreateConcertActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("MissingPermission")
     private fun getCurrentLocation() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+
+            return
+        }
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            currentLocation = location
             if (location != null) {
-                currentLocation = location
-                binding.locationTextView.text =
-                    "Latitud: ${location.latitude}, Longitud: ${location.longitude}, Altitud: ${location.altitude}"
+                binding.locationTextView.text = "Lat: ${location.latitude}, Lng: ${location.longitude}"
             } else {
-                Toast.makeText(this, "No se pudo obtener la ubicación", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Ubicación no disponible", Toast.LENGTH_SHORT).show()
             }
-        }.addOnFailureListener {
-            Toast.makeText(this, "Error obteniendo la ubicación", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -86,79 +89,28 @@ class CreateConcertActivity : AppCompatActivity() {
             return
         }
 
-        val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(dateStr)
+        val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(dateStr)?.time ?: return
 
-        val newConcert = date?.let { Concert(name, it, currentLocation!!, mutableListOf()) }
-        val concerts = loadConcertsFromFile().toMutableList()
+        val uniqueId = database.push().key ?: UUID.randomUUID().toString()
+        val newConcert = Concert(
+            id = uniqueId,
+            name = name,
+            date = date,
+            location = Position(
+                latitude = currentLocation!!.latitude,
+                longitude = currentLocation!!.longitude,
+                isOnline = false
+            ),
+            venues = mutableListOf()
+        )
 
-        if (newConcert != null) {
-            concerts.add(newConcert)
-        }
-
-        writeConcertsToFile(concerts)
-        Toast.makeText(this, "Concierto creado exitosamente", Toast.LENGTH_SHORT).show()
-
-        finish()
-    }
-
-    private fun loadConcertsFromFile(): List<Concert> {
-        return try {
-            val file = File(filesDir, concertsFileName)
-
-            if (!file.exists()) {
-                throw Exception("El archivo concerts.json no existe en el almacenamiento interno.")
+        database.child(uniqueId).setValue(newConcert)
+            .addOnSuccessListener {
+                Toast.makeText(this, "Concierto creado exitosamente", Toast.LENGTH_SHORT).show()
+                finish()
             }
-
-            val inputStream = file.inputStream()
-            val reader = InputStreamReader(inputStream)
-
-            val gson = GsonBuilder()
-                .registerTypeAdapter(Location::class.java, LocationAdapter())
-                .registerTypeAdapter(Date::class.java, DateTypeAdapter())
-                .create()
-
-            val concertType = object : TypeToken<List<Concert>>() {}.type
-
-            gson.fromJson(reader, concertType)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    private fun writeConcertsToFile(concerts: List<Concert>) {
-        try {
-            val file = File(filesDir, concertsFileName)
-
-            val outputStream = file.outputStream()
-            val writer = OutputStreamWriter(outputStream)
-
-            val gson = GsonBuilder()
-                .registerTypeAdapter(Location::class.java, LocationAdapter())
-                .registerTypeAdapter(Date::class.java, DateTypeAdapter())
-                .create()
-
-            gson.toJson(concerts, writer)
-
-            writer.flush()
-            writer.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_LOCATION_PERMISSION) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                getCurrentLocation()
-            } else {
-                Toast.makeText(this, "Permiso de ubicación denegado", Toast.LENGTH_SHORT).show()
+            .addOnFailureListener {
+                Toast.makeText(this, "Error al guardar el concierto", Toast.LENGTH_LONG).show()
             }
-        }
     }
 }

@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.puj.acoustikiq.R
-import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PERMISSION
+import com.puj.acoustikiq.activities.MenuActivity.Companion.REQUEST_CODE_MIC_PERMISSION
 import com.puj.acoustikiq.databinding.ActivitySpectrumAnalysisBinding
 import com.puj.acoustikiq.fragments.FFTFragment
 
@@ -33,7 +33,7 @@ class SpectrumAnalysisActivity : AppCompatActivity() {
         }
 
         spectrumBinding.backButton.setOnClickListener(){
-            val backIntent = Intent(this, MainActivity::class.java)
+            val backIntent = Intent(this, MenuActivity::class.java)
             startActivity(backIntent)
         }
     }

@@ -11,28 +11,19 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
-import com.puj.acoustikiq.adapters.DateTypeAdapter
-import com.puj.acoustikiq.adapters.LocationAdapter
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import com.puj.acoustikiq.databinding.ActivityCreateVenueBinding
 import com.puj.acoustikiq.model.Concert
 import com.puj.acoustikiq.model.Venue
-import com.puj.acoustikiq.util.Alerts
-import java.io.File
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
+import java.util.*
 
 class CreateVenueActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCreateVenueBinding
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var currentLocation: Location? = null
-    private val venuesFileName = "venues.json"
-    private val concertsFileName = "concerts.json"
     private val REQUEST_LOCATION_PERMISSION = 1001
-    private val alerts = Alerts(this)
-    private val PERM_LOCATION_CODE = 303
     private lateinit var concert: Concert
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,13 +38,13 @@ class CreateVenueActivity : AppCompatActivity() {
         getLocationPermission()
 
         binding.saveButton.setOnClickListener {
-            saveVenue()
+            saveVenueToFirebase()
         }
     }
 
     private fun getLocationPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != android.content.pm.PackageManager.PERMISSION_GRANTED
+            != PackageManager.PERMISSION_GRANTED
         ) {
             ActivityCompat.requestPermissions(
                 this,
@@ -65,27 +56,22 @@ class CreateVenueActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint("MissingPermission")
     private fun getCurrentLocation() {
-        if (ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED) {
-
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                if (location != null) {
-                    currentLocation = location
-                    binding.locationTextView.text =
-                        "Latitud: ${location.latitude}, Longitud: ${location.longitude}, Altitud: ${location.altitude}"
-                } else {
-                    Toast.makeText(this, "No se pudo obtener la ubicación", Toast.LENGTH_SHORT).show()
-                }
-            }.addOnFailureListener {
-                Toast.makeText(this, "Error obteniendo la ubicación", Toast.LENGTH_SHORT).show()
+        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            if (location != null) {
+                currentLocation = location
+                binding.locationTextView.text =
+                    "Latitud: ${location.latitude}, Longitud: ${location.longitude}, Altitud: ${location.altitude}"
+            } else {
+                Toast.makeText(this, "No se pudo obtener la ubicación", Toast.LENGTH_SHORT).show()
             }
+        }.addOnFailureListener {
+            Toast.makeText(this, "Error obteniendo la ubicación", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun saveVenue() {
+    private fun saveVenueToFirebase() {
         val venueName = binding.venueNameEditText.text.toString()
         val temperature = binding.venueTemperatureEditText.text.toString().toDoubleOrNull()
 
@@ -94,110 +80,31 @@ class CreateVenueActivity : AppCompatActivity() {
             return
         }
 
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val venueId = UUID.randomUUID().toString() // Generar ID único para el venue
+        val venuePath = "concerts/users/$userId/${concert.id}/venues/$venueId"
+
         val newVenue = Venue(
+            id = venueId,
             name = venueName,
             venueLineArray = mutableListOf(),
             temperature = temperature
         )
 
-        val venues = loadVenuesFromFile().toMutableList()
-        venues.add(newVenue)
-        writeVenuesToFile(venues)
-
-        updateConcertWithVenue(newVenue)
-
-        Toast.makeText(this, "Venue creado exitosamente", Toast.LENGTH_SHORT).show()
-        finish()
-    }
-
-    private fun loadVenuesFromFile(): List<Venue> {
-        return try {
-            val file = File(filesDir, venuesFileName)
-            if (!file.exists()) {
-                return emptyList()
+        FirebaseDatabase.getInstance().reference
+            .child(venuePath)
+            .setValue(newVenue)
+            .addOnCompleteListener {
+                if (it.isSuccessful) {
+                    Toast.makeText(this, "Venue creado exitosamente", Toast.LENGTH_SHORT).show()
+                    finish()
+                } else {
+                    Toast.makeText(this, "Error al guardar el venue", Toast.LENGTH_SHORT).show()
+                }
             }
-            val inputStream = file.inputStream()
-            val reader = InputStreamReader(inputStream)
-            val gson = GsonBuilder()
-                .registerTypeAdapter(Location::class.java, LocationAdapter())
-                .create()
-
-            val venueType = object : TypeToken<List<Venue>>() {}.type
-            gson.fromJson(reader, venueType)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    private fun writeVenuesToFile(venues: List<Venue>) {
-        try {
-            val file = File(filesDir, venuesFileName)
-            val outputStream = file.outputStream()
-            val writer = OutputStreamWriter(outputStream)
-            val gson = GsonBuilder()
-                .registerTypeAdapter(Location::class.java, LocationAdapter())
-                .create()
-
-            gson.toJson(venues, writer)
-            writer.flush()
-            writer.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    private fun updateConcertWithVenue(newVenue: Venue) {
-        val concerts = loadConcertsFromFile().toMutableList()
-        val selectedConcert = concerts.find { it.name == concert.name }
-
-        if (selectedConcert != null) {
-            selectedConcert.venues = selectedConcert.venues.toMutableList().apply {
-                add(newVenue)
+            .addOnFailureListener { error ->
+                Toast.makeText(this, "Error: ${error.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
-            writeConcertsToFile(concerts)
-        } else {
-            Toast.makeText(this, "Concierto no encontrado", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun loadConcertsFromFile(): List<Concert> {
-        return try {
-            val file = File(filesDir, concertsFileName)
-            if (!file.exists()) {
-                return emptyList()
-            }
-            val inputStream = file.inputStream()
-            val reader = InputStreamReader(inputStream)
-            val gson = GsonBuilder()
-                .registerTypeAdapter(Location::class.java, LocationAdapter())
-                .registerTypeAdapter(java.util.Date::class.java, DateTypeAdapter())
-                .create()
-
-            val concertType = object : TypeToken<List<Concert>>() {}.type
-            gson.fromJson(reader, concertType)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    private fun writeConcertsToFile(concerts: List<Concert>) {
-        try {
-            val file = File(filesDir, concertsFileName)
-            val outputStream = file.outputStream()
-            val writer = OutputStreamWriter(outputStream)
-            val gson = GsonBuilder()
-                .registerTypeAdapter(Location::class.java, LocationAdapter())
-                .registerTypeAdapter(java.util.Date::class.java, DateTypeAdapter())
-                .create()
-
-            gson.toJson(concerts, writer)
-            writer.flush()
-            writer.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 
     override fun onRequestPermissionsResult(

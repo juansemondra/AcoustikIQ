@@ -5,6 +5,7 @@ import android.os.Parcel
 import android.os.Parcelable
 
 data class LineArray(
+    var id: String? = "",
     var type: String,
     var system: Speaker,
     var quantity: Int,
@@ -14,6 +15,7 @@ data class LineArray(
     var calibratedPhase: Boolean
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
+        parcel.readString(),
         parcel.readString()!!,
         parcel.readParcelable(Speaker::class.java.classLoader)!!,
         parcel.readInt(),
@@ -24,6 +26,7 @@ data class LineArray(
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeString(id)
         parcel.writeString(type)
         parcel.writeParcelable(system, flags)
         parcel.writeInt(quantity)
@@ -47,4 +50,3 @@ data class LineArray(
         }
     }
 }
-

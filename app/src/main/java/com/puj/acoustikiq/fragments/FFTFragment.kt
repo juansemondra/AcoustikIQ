@@ -16,7 +16,7 @@ import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
-import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PERMISSION
+import com.puj.acoustikiq.activities.MenuActivity.Companion.REQUEST_CODE_MIC_PERMISSION
 import com.puj.acoustikiq.databinding.FragmentFftBinding
 import com.puj.acoustikiq.util.Complex
 import com.puj.acoustikiq.util.FFTProcessor

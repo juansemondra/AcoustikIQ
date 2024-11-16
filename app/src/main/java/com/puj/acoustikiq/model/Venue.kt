@@ -4,17 +4,20 @@ import android.os.Parcel
 import android.os.Parcelable
 
 data class Venue(
+    var id: String = "",
     var name: String,
     var venueLineArray: MutableList<LineArray>,
     var temperature: Double
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readString()!!,
+        parcel.readString()!!,
         parcel.createTypedArrayList(LineArray.CREATOR)!!,
         parcel.readDouble()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeString(id)
         parcel.writeString(name)
         parcel.writeTypedList(venueLineArray)
         parcel.writeDouble(temperature)

@@ -13,7 +13,7 @@ import android.view.ViewGroup
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.puj.acoustikiq.activities.MainActivity.Companion.REQUEST_CODE_MIC_PERMISSION
+import com.puj.acoustikiq.activities.MenuActivity.Companion.REQUEST_CODE_MIC_PERMISSION
 import com.puj.acoustikiq.databinding.FragmentLevelMeterBinding
 import kotlin.math.log10
 

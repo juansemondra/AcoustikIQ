@@ -19,10 +19,11 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:targetApi="31">
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyB22toYWo96YegAQ5F39rmWH-Av_Xzl1gY" />
-            />
+
         <activity
             android:name=".activities.SpectrumAnalysisActivity" />
         <activity
@@ -44,8 +45,6 @@
         <activity
             android:name=".activities.GalleryActivity"/>
         <activity
-            android:name=".activities.LoginActivity"/>
-        <activity
             android:name=".activities.RegisterActivity"/>
         <activity
             android:name=".activities.ProfileActivity"/>
@@ -55,6 +54,8 @@
             android:name=".activities.CreateConcertActivity"/>
         <activity
             android:name=".activities.CreateVenueActivity"/>
+        <activity
+            android:name=".activities.MenuActivity"/>
 
         <activity
             android:name=".activities.MainActivity"
@@ -65,6 +66,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
 
         <provider
             android:name="androidx.core.content.FileProvider"
