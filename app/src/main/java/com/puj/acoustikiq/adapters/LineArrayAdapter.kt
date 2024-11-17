@@ -22,7 +22,7 @@ class LineArrayAdapter(private val lineArrays: List<LineArray>) :
         holder.binding.typeTextView.text = "Type: ${lineArray.type}"
         holder.binding.systemTextView.text = "System: ${lineArray.system.model} (${lineArray.system.type})"
         holder.binding.quantityTextView.text = "Quantity: ${lineArray.quantity}"
-        holder.binding.locationTextView.text = "Location: ${lineArray.location.latitude}, ${lineArray.location.longitude}, ${lineArray.location.altitude}"
+        holder.binding.locationTextView.text = "Location: ${lineArray.location.latitude}, ${lineArray.location.longitude}"
         holder.binding.delayTextView.text = "Delay: ${lineArray.delay}"
         holder.binding.calibratedFreqTextView.text = "Calibrated Freq: ${lineArray.calibratedFreq}"
         holder.binding.calibratedPhaseTextView.text = "Calibrated Phase: ${lineArray.calibratedPhase}"

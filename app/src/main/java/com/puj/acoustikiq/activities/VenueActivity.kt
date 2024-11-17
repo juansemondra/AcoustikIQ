@@ -3,6 +3,7 @@ package com.puj.acoustikiq.activities
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.os.Parcelable
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
@@ -33,6 +34,7 @@ class VenueActivity : AppCompatActivity() {
         concert = intent.getParcelableExtra("concert")
             ?: throw NullPointerException("Concert object is missing in intent")
 
+        setupRecyclerView()
         loadVenues()
 
         binding.backButton.setOnClickListener {
@@ -42,26 +44,29 @@ class VenueActivity : AppCompatActivity() {
 
         binding.createVenueButton.setOnClickListener {
             val venueIntent = Intent(this, CreateVenueActivity::class.java)
-            venueIntent.putExtra("concertId", concert.id)
+            venueIntent.putExtra("concert", concert as Parcelable)
             startActivity(venueIntent)
         }
+    }
+
+    private fun setupRecyclerView() {
+        venueAdapter = VenueAdapter(mutableListOf(), ::onVenueClick)
+        binding.venueRecyclerView.layoutManager = LinearLayoutManager(this)
+        binding.venueRecyclerView.adapter = venueAdapter
     }
 
     private fun loadVenues() {
         database.child(concert.id).child("venues").get()
             .addOnSuccessListener { snapshot ->
-                val venues = snapshot.children.mapNotNull { it.getValue(Venue::class.java) }
-                setupVenueAdapter(venues)
+                val venues = snapshot.children.mapNotNull {
+                    val venue = it.getValue(Venue::class.java)
+                    venue?.apply { id = it.key ?: "" }
+                }
+                venueAdapter.updateVenues(venues)
             }
             .addOnFailureListener { error ->
-                // Manejo de error
-            }
-    }
 
-    private fun setupVenueAdapter(venues: List<Venue>) {
-        venueAdapter = VenueAdapter(venues, ::onVenueClick)
-        binding.venueRecyclerView.layoutManager = LinearLayoutManager(this)
-        binding.venueRecyclerView.adapter = venueAdapter
+            }
     }
 
     private fun onVenueClick(venue: Venue) {
@@ -70,14 +75,14 @@ class VenueActivity : AppCompatActivity() {
             .setMessage("Elija una opción para el venue ${venue.name}")
             .setPositiveButton("Editar") { _, _ ->
                 val editIntent = Intent(this, EditVenueActivity::class.java)
-                editIntent.putExtra("venueId", venue.id)
-                editIntent.putExtra("concertId", concert.id)
+                editIntent.putExtra("venue", venue)
+                editIntent.putExtra("concert", concert as Parcelable)
                 startActivity(editIntent)
             }
             .setNegativeButton("Abrir") { _, _ ->
                 val openIntent = Intent(this, OpenVenueActivity::class.java)
-                openIntent.putExtra("venueId", venue.id)
-                openIntent.putExtra("concertId", concert.id)
+                openIntent.putExtra("venue", venue)
+                openIntent.putExtra("concert", concert as Parcelable)
                 startActivity(openIntent)
             }
             .setNeutralButton("Cancelar", null)

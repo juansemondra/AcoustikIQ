@@ -11,6 +11,8 @@ import com.google.firebase.database.*
 import com.puj.acoustikiq.adapters.ConcertAdapter
 import com.puj.acoustikiq.databinding.ActivityConcertBinding
 import com.puj.acoustikiq.model.Concert
+import com.puj.acoustikiq.model.LineArray
+import com.puj.acoustikiq.model.Venue
 import com.puj.acoustikiq.util.Alerts
 import java.io.Serializable
 
@@ -57,6 +59,19 @@ class ConcertActivity : AppCompatActivity() {
                     val concert = concertSnapshot.getValue(Concert::class.java)
                     concert?.let {
                         it.id = concertSnapshot.key ?: ""
+
+                        // Convierte venues de HashMap a MutableList si es necesario
+                        if (it.venues is Map<*, *>) {
+                            it.venues = (it.venues as Map<String, Venue>).values.toMutableList()
+
+                            it.venues.forEach { venue ->
+                                if (venue.venueLineArray is Map<*, *>) {
+                                    venue.venueLineArray =
+                                        (venue.venueLineArray as Map<String, LineArray>).values.toMutableList()
+                                }
+                            }
+                        }
+
                         concertList.add(it)
                     }
                 }
@@ -69,6 +84,7 @@ class ConcertActivity : AppCompatActivity() {
         })
     }
 
+    
     private fun onConcertClick(concert: Concert) {
         AlertDialog.Builder(this)
             .setTitle("Opciones de Concierto")

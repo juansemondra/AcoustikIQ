@@ -5,15 +5,17 @@ import android.os.Parcelable
 
 data class Venue(
     var id: String = "",
-    var name: String,
-    var venueLineArray: MutableList<LineArray>,
-    var temperature: Double
+    var name: String = "",
+    var venueLineArray: MutableList<LineArray> = mutableListOf(),
+    var temperature: Double = 0.0,
+    var position: Position = Position()
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readString()!!,
         parcel.readString()!!,
         parcel.createTypedArrayList(LineArray.CREATOR)!!,
-        parcel.readDouble()
+        parcel.readDouble(),
+        parcel.readParcelable(Position::class.java.classLoader)!!
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -21,6 +23,7 @@ data class Venue(
         parcel.writeString(name)
         parcel.writeTypedList(venueLineArray)
         parcel.writeDouble(temperature)
+        parcel.writeParcelable(position, flags)
     }
 
     override fun describeContents(): Int {

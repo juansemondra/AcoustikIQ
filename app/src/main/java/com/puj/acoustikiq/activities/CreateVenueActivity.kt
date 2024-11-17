@@ -15,6 +15,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.puj.acoustikiq.databinding.ActivityCreateVenueBinding
 import com.puj.acoustikiq.model.Concert
+import com.puj.acoustikiq.model.Position
 import com.puj.acoustikiq.model.Venue
 import java.util.*
 
@@ -62,7 +63,7 @@ class CreateVenueActivity : AppCompatActivity() {
             if (location != null) {
                 currentLocation = location
                 binding.locationTextView.text =
-                    "Latitud: ${location.latitude}, Longitud: ${location.longitude}, Altitud: ${location.altitude}"
+                    "Latitud: ${location.latitude}, Longitud: ${location.longitude}"
             } else {
                 Toast.makeText(this, "No se pudo obtener la ubicación", Toast.LENGTH_SHORT).show()
             }
@@ -81,14 +82,20 @@ class CreateVenueActivity : AppCompatActivity() {
         }
 
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val venueId = UUID.randomUUID().toString() // Generar ID único para el venue
+        val venueId = UUID.randomUUID().toString()
         val venuePath = "concerts/users/$userId/${concert.id}/venues/$venueId"
+
+        val position = Position(
+            latitude = currentLocation!!.latitude,
+            longitude = currentLocation!!.longitude
+        )
 
         val newVenue = Venue(
             id = venueId,
             name = venueName,
-            venueLineArray = mutableListOf(),
-            temperature = temperature
+            position = position,
+            temperature = temperature,
+            venueLineArray = mutableListOf()
         )
 
         FirebaseDatabase.getInstance().reference

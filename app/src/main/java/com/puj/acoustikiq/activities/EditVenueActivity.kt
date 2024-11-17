@@ -4,11 +4,12 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.database.FirebaseDatabase
 import com.puj.acoustikiq.databinding.ActivityEditVenueBinding
 import com.puj.acoustikiq.model.Concert
+import com.puj.acoustikiq.model.Position
 import com.puj.acoustikiq.model.Venue
 import java.io.Serializable
 
@@ -31,30 +32,38 @@ class EditVenueActivity : AppCompatActivity() {
         concert = intent.getParcelableExtra("concert")
             ?: throw NullPointerException("Concert object is missing in intent")
 
-        database = Firebase.database.reference
+        database = FirebaseDatabase.getInstance().getReference("concerts/users/${FirebaseAuth.getInstance().currentUser?.uid}")
 
-        binding.venueNameEditText.setText(venue.name)
-        binding.venueTemperatureEditText.setText(venue.temperature.toString())
+        populateFields()
 
         binding.saveVenueButton.setOnClickListener {
             saveChanges()
         }
     }
 
+    private fun populateFields() {
+        binding.venueNameEditText.setText(venue.name)
+        binding.venueTemperatureEditText.setText(venue.temperature.toString())
+        binding.venueLatitudeEditText.setText(venue.position.latitude.toString())
+        binding.venueLongitudeEditText.setText(venue.position.longitude.toString())
+    }
+
     private fun saveChanges() {
         val newName = binding.venueNameEditText.text.toString()
         val newTemperature = binding.venueTemperatureEditText.text.toString().toDoubleOrNull()
+        val newLatitude = binding.venueLatitudeEditText.text.toString().toDoubleOrNull()
+        val newLongitude = binding.venueLongitudeEditText.text.toString().toDoubleOrNull()
 
-        if (newName.isEmpty() || newTemperature == null) {
+        if (newName.isEmpty() || newTemperature == null || newLatitude == null || newLongitude == null) {
             Toast.makeText(this, "Todos los campos son obligatorios", Toast.LENGTH_SHORT).show()
             return
         }
 
         venue.name = newName
         venue.temperature = newTemperature
+        venue.position = Position(latitude = newLatitude, longitude = newLongitude)
 
-        val venuePath =
-            "concerts/users/${Firebase.database.reference.push().key}/${concert.id}/venues/${venue.id}"
+        val venuePath = "${concert.id}/venues/${venue.id}"
 
         database.child(venuePath)
             .setValue(venue)

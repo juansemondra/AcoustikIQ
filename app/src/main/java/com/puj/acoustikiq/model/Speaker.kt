@@ -4,13 +4,13 @@ import android.os.Parcel
 import android.os.Parcelable
 
 data class Speaker(
-    var model: String,
-    var type: String,
-    var maxSPL: Int,
-    var minFreq: Int,
-    var maxFreq: Int,
-    var horDirectivity: Int,
-    var verDirectivity: Int
+    var model: String = "",
+    var type: String = "",
+    var maxSPL: Int = 0,
+    var minFreq: Int = 0,
+    var maxFreq: Int = 0,
+    var horDirectivity: Int = 0,
+    var verDirectivity: Int = 0
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readString()!!,
@@ -32,17 +32,10 @@ data class Speaker(
         parcel.writeInt(verDirectivity)
     }
 
-    override fun describeContents(): Int {
-        return 0
-    }
+    override fun describeContents(): Int = 0
 
     companion object CREATOR : Parcelable.Creator<Speaker> {
-        override fun createFromParcel(parcel: Parcel): Speaker {
-            return Speaker(parcel)
-        }
-
-        override fun newArray(size: Int): Array<Speaker?> {
-            return arrayOfNulls(size)
-        }
+        override fun createFromParcel(parcel: Parcel): Speaker = Speaker(parcel)
+        override fun newArray(size: Int): Array<Speaker?> = arrayOfNulls(size)
     }
 }

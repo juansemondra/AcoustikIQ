@@ -6,20 +6,20 @@ import android.os.Parcelable
 
 data class LineArray(
     var id: String? = "",
-    var type: String,
-    var system: Speaker,
-    var quantity: Int,
-    var location: Location,
-    var delay: Float,
-    var calibratedFreq: Boolean,
-    var calibratedPhase: Boolean
+    var type: String = "",
+    var system: Speaker = Speaker(),
+    var quantity: Int = 0,
+    var location: Position = Position(),
+    var delay: Float = 0f,
+    var calibratedFreq: Boolean = false,
+    var calibratedPhase: Boolean = false
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readString(),
         parcel.readString()!!,
         parcel.readParcelable(Speaker::class.java.classLoader)!!,
         parcel.readInt(),
-        parcel.readParcelable(Location::class.java.classLoader)!!,
+        parcel.readParcelable(Position::class.java.classLoader)!!,
         parcel.readFloat(),
         parcel.readByte() != 0.toByte(),
         parcel.readByte() != 0.toByte()
@@ -36,17 +36,10 @@ data class LineArray(
         parcel.writeByte(if (calibratedPhase) 1 else 0)
     }
 
-    override fun describeContents(): Int {
-        return 0
-    }
+    override fun describeContents(): Int = 0
 
     companion object CREATOR : Parcelable.Creator<LineArray> {
-        override fun createFromParcel(parcel: Parcel): LineArray {
-            return LineArray(parcel)
-        }
-
-        override fun newArray(size: Int): Array<LineArray?> {
-            return arrayOfNulls(size)
-        }
+        override fun createFromParcel(parcel: Parcel): LineArray = LineArray(parcel)
+        override fun newArray(size: Int): Array<LineArray?> = arrayOfNulls(size)
     }
 }
