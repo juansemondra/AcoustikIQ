@@ -8,10 +8,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
+import com.google.gson.Gson
 import com.puj.acoustikiq.adapters.ConcertAdapter
 import com.puj.acoustikiq.databinding.ActivityConcertBinding
 import com.puj.acoustikiq.model.Concert
 import com.puj.acoustikiq.model.LineArray
+import com.puj.acoustikiq.model.Position
 import com.puj.acoustikiq.model.Venue
 import com.puj.acoustikiq.util.Alerts
 import java.io.Serializable
@@ -55,26 +57,47 @@ class ConcertActivity : AppCompatActivity() {
         database.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 concertList.clear()
+
                 for (concertSnapshot in snapshot.children) {
                     val concert = concertSnapshot.getValue(Concert::class.java)
                     concert?.let {
                         it.id = concertSnapshot.key ?: ""
 
-                        // Convierte venues de HashMap a MutableList si es necesario
-                        if (it.venues is Map<*, *>) {
-                            it.venues = (it.venues as Map<String, Venue>).values.toMutableList()
 
-                            it.venues.forEach { venue ->
-                                if (venue.venueLineArray is Map<*, *>) {
-                                    venue.venueLineArray =
-                                        (venue.venueLineArray as Map<String, LineArray>).values.toMutableList()
-                                }
+                        if (concertSnapshot.hasChild("venues")) {
+                            val venuesMap = concertSnapshot.child("venues").value as? Map<*, *>
+                            if (venuesMap != null) {
+                                it.venues = venuesMap.mapNotNull { entry ->
+                                    val venueKey = entry.key as? String ?: return@mapNotNull null
+                                    val venueMap = entry.value as? Map<*, *> ?: return@mapNotNull null
+
+
+                                    val venue = Venue(
+                                        id = venueKey,
+                                        name = venueMap["name"] as? String ?: "",
+                                        temperature = (venueMap["temperature"] as? Double) ?: 0.0,
+                                        position = Gson().fromJson(
+                                            Gson().toJson(venueMap["position"]),
+                                            Position::class.java
+                                        )
+                                    )
+
+                                    if (venueMap["venueLineArray"] is Map<*, *>) {
+                                        val lineArrayMap = venueMap["venueLineArray"] as Map<*, *>
+                                        venue.venueLineArray = lineArrayMap.values.mapNotNull { lineArrayObj ->
+                                            Gson().fromJson(Gson().toJson(lineArrayObj), LineArray::class.java)
+                                        }.toMutableList()
+                                    }
+
+                                    venue
+                                }.toMutableList()
                             }
                         }
 
                         concertList.add(it)
                     }
                 }
+
                 concertAdapter.notifyDataSetChanged()
             }
 
@@ -84,7 +107,6 @@ class ConcertActivity : AppCompatActivity() {
         })
     }
 
-    
     private fun onConcertClick(concert: Concert) {
         AlertDialog.Builder(this)
             .setTitle("Opciones de Concierto")

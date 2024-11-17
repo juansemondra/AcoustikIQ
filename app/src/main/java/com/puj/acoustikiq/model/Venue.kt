@@ -7,15 +7,15 @@ data class Venue(
     var id: String = "",
     var name: String = "",
     var venueLineArray: MutableList<LineArray> = mutableListOf(),
-    var temperature: Double = 0.0,
-    var position: Position = Position()
+    var position: Position = Position(),
+    var temperature: Double = 0.0
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readString()!!,
         parcel.readString()!!,
         parcel.createTypedArrayList(LineArray.CREATOR)!!,
-        parcel.readDouble(),
-        parcel.readParcelable(Position::class.java.classLoader)!!
+        parcel.readParcelable(Position::class.java.classLoader)!!,
+        parcel.readDouble()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {

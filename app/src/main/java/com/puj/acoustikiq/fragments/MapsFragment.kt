@@ -126,15 +126,29 @@ class MapsFragment : Fragment() {
                 markers.clear()
 
                 snapshot.children.forEach { child ->
-                    val lineArray = child.getValue(LineArray::class.java)
-                    lineArray?.let {
-                        addMarkerForLineArray(it)
+                    val map = child.value as? Map<*, *>
+                    if (map != null) {
+                        val locationMap = map["location"] as? Map<*, *>
+                        val lineArray = LineArray(
+                            id = map["id"] as? String,
+                            type = map["type"] as? String ?: "",
+                            system = Gson().fromJson(Gson().toJson(map["system"]), Speaker::class.java),
+                            quantity = (map["quantity"] as? Long)?.toInt() ?: 0,
+                            location = Position(
+                                latitude = locationMap?.get("latitude") as? Double ?: 0.0,
+                                longitude = locationMap?.get("longitude") as? Double ?: 0.0
+                            ),
+                            delay = (map["delay"] as? Double)?.toFloat() ?: 0f,
+                            calibratedFreq = map["calibratedFreq"] as? Boolean ?: false,
+                            calibratedPhase = map["calibratedPhase"] as? Boolean ?: false
+                        )
+                        addMarkerForLineArray(lineArray)
                     }
                 }
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(context, "Error loading line arrays: ${error.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Error al cargar line arrays: ${error.message}", Toast.LENGTH_SHORT).show()
             }
         })
     }

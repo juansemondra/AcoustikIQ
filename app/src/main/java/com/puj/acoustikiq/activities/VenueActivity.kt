@@ -4,14 +4,20 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.os.Parcelable
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.gson.Gson
 import com.puj.acoustikiq.adapters.VenueAdapter
 import com.puj.acoustikiq.databinding.ActivityVenueBinding
 import com.puj.acoustikiq.model.Concert
+import com.puj.acoustikiq.model.LineArray
 import com.puj.acoustikiq.model.Venue
 
 class VenueActivity : AppCompatActivity() {
@@ -56,17 +62,38 @@ class VenueActivity : AppCompatActivity() {
     }
 
     private fun loadVenues() {
-        database.child(concert.id).child("venues").get()
-            .addOnSuccessListener { snapshot ->
-                val venues = snapshot.children.mapNotNull {
-                    val venue = it.getValue(Venue::class.java)
-                    venue?.apply { id = it.key ?: "" }
+        database.child(concert.id).child("venues").addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val venues = mutableListOf<Venue>()
+
+                for (venueSnapshot in snapshot.children) {
+                    val venue = venueSnapshot.getValue(Venue::class.java)
+                    venue?.let {
+                        it.id = venueSnapshot.key ?: ""
+
+                        if (!venueSnapshot.hasChild("venueLineArray")) {
+                            database.child(concert.id).child("venues").child(it.id)
+                                .child("venueLineArray").setValue(emptyList<LineArray>())
+                            it.venueLineArray = mutableListOf()
+                        }
+                        else if (it.venueLineArray is Map<*, *>) {
+                            val lineArrayMap = venueSnapshot.child("venueLineArray").value as Map<*, *>
+                            it.venueLineArray = lineArrayMap.values.mapNotNull { lineArrayObj ->
+                                Gson().fromJson(Gson().toJson(lineArrayObj), LineArray::class.java)
+                            }.toMutableList()
+                        }
+
+                        venues.add(it)
+                    }
                 }
+
                 venueAdapter.updateVenues(venues)
             }
-            .addOnFailureListener { error ->
 
+            override fun onCancelled(error: DatabaseError) {
+                Toast.makeText(this@VenueActivity, "Error al cargar venues: ${error.message}", Toast.LENGTH_SHORT).show()
             }
+        })
     }
 
     private fun onVenueClick(venue: Venue) {
