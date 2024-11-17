@@ -101,7 +101,7 @@ class CreateConcertActivity : AppCompatActivity() {
                 longitude = currentLocation!!.longitude,
                 isOnline = false
             ),
-            venues = mutableListOf()
+            venues = hashMapOf()
         )
 
         database.child(uniqueId).setValue(newConcert)

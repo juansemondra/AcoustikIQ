@@ -2,21 +2,24 @@ package com.puj.acoustikiq.model
 
 import android.os.Parcel
 import android.os.Parcelable
+import com.google.gson.Gson
 
 data class Concert(
     var id: String = "",
     var name: String = "",
     var date: Long = 0L,
     var location: Position = Position(),
-    var venues: MutableList<Venue> = mutableListOf()
+    var venues: HashMap<String, Venue> = hashMapOf()
 ) : Parcelable {
-
     constructor(parcel: Parcel) : this(
-        parcel.readString() ?: "",
-        parcel.readString() ?: "",
-        parcel.readLong(),
-        parcel.readParcelable(Position::class.java.classLoader) ?: Position(),
-        parcel.createTypedArrayList(Venue.CREATOR) ?: mutableListOf()
+        id = parcel.readString() ?: "",
+        name = parcel.readString() ?: "",
+        date = parcel.readLong(),
+        location = parcel.readParcelable(Position::class.java.classLoader) ?: Position(),
+        venues = Gson().fromJson(
+            parcel.readString(),
+            HashMap::class.java
+        ) as HashMap<String, Venue>
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -24,7 +27,7 @@ data class Concert(
         parcel.writeString(name)
         parcel.writeLong(date)
         parcel.writeParcelable(location, flags)
-        parcel.writeTypedList(venues)
+        parcel.writeString(Gson().toJson(venues))
     }
 
     override fun describeContents(): Int = 0

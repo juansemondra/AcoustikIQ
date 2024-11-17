@@ -7,7 +7,7 @@ import com.puj.acoustikiq.databinding.ItemVenueBinding
 import com.puj.acoustikiq.model.Venue
 
 class VenueAdapter(
-    private var venues: MutableList<Venue>,
+    private var venues: Map<String, Venue>,
     private val onVenueClick: (Venue) -> Unit
 ) : RecyclerView.Adapter<VenueAdapter.VenueViewHolder>() {
 
@@ -19,20 +19,17 @@ class VenueAdapter(
     }
 
     override fun onBindViewHolder(holder: VenueViewHolder, position: Int) {
-        val venue = venues[position]
+        val venueEntry = venues.entries.toList()[position]
+        val venue = venueEntry.value
 
         holder.binding.venueNameTextView.text = venue.name
-
-        holder.itemView.setOnClickListener {
-            onVenueClick(venue)
-        }
+        holder.itemView.setOnClickListener { onVenueClick(venue) }
     }
 
     override fun getItemCount(): Int = venues.size
 
-    fun updateVenues(newVenues: List<Venue>) {
-        venues.clear()
-        venues.addAll(newVenues)
+    fun updateVenues(newVenues: Map<String, Venue>) {
+        venues = newVenues
         notifyDataSetChanged()
     }
 }

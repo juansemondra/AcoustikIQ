@@ -95,7 +95,7 @@ class CreateVenueActivity : AppCompatActivity() {
             name = venueName,
             position = position,
             temperature = temperature,
-            venueLineArray = mutableListOf()
+            venueLineArray = hashMapOf()
         )
 
         FirebaseDatabase.getInstance().reference

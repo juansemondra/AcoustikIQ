@@ -63,14 +63,15 @@ class EditVenueActivity : AppCompatActivity() {
         venue.temperature = newTemperature
         venue.position = Position(latitude = newLatitude, longitude = newLongitude)
 
-        val venuePath = "${concert.id}/venues/${venue.id}"
+        val venuePath = "concerts/users/${FirebaseAuth.getInstance().currentUser?.uid}/${concert.id}/venues/${venue.id}"
 
-        database.child(venuePath)
+        FirebaseDatabase.getInstance().reference
+            .child(venuePath)
             .setValue(venue)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     Toast.makeText(this, "Venue actualizado exitosamente", Toast.LENGTH_SHORT).show()
-                    navigateToVenueActivity()
+                    finish()
                 } else {
                     Toast.makeText(this, "Error al actualizar el venue", Toast.LENGTH_SHORT).show()
                 }

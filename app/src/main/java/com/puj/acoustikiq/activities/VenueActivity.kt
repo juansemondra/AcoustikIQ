@@ -12,6 +12,7 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.GenericTypeIndicator
 import com.google.firebase.database.ValueEventListener
 import com.google.gson.Gson
 import com.puj.acoustikiq.adapters.VenueAdapter
@@ -50,13 +51,13 @@ class VenueActivity : AppCompatActivity() {
 
         binding.createVenueButton.setOnClickListener {
             val venueIntent = Intent(this, CreateVenueActivity::class.java)
-            venueIntent.putExtra("concert", concert as Parcelable)
+            venueIntent.putExtra("concert", concert)
             startActivity(venueIntent)
         }
     }
 
     private fun setupRecyclerView() {
-        venueAdapter = VenueAdapter(mutableListOf(), ::onVenueClick)
+        venueAdapter = VenueAdapter(mapOf(), ::onVenueClick)
         binding.venueRecyclerView.layoutManager = LinearLayoutManager(this)
         binding.venueRecyclerView.adapter = venueAdapter
     }
@@ -64,26 +65,28 @@ class VenueActivity : AppCompatActivity() {
     private fun loadVenues() {
         database.child(concert.id).child("venues").addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val venues = mutableListOf<Venue>()
+                val venues = hashMapOf<String, Venue>()
 
                 for (venueSnapshot in snapshot.children) {
-                    val venue = venueSnapshot.getValue(Venue::class.java)
-                    venue?.let {
-                        it.id = venueSnapshot.key ?: ""
+                    val venueMap = venueSnapshot.value as? HashMap<*, *>
+                    if (venueMap != null) {
+                        val venue = Gson().fromJson(Gson().toJson(venueMap), Venue::class.java)
+                        venue.id = venueSnapshot.key ?: ""
 
-                        if (!venueSnapshot.hasChild("venueLineArray")) {
-                            database.child(concert.id).child("venues").child(it.id)
-                                .child("venueLineArray").setValue(emptyList<LineArray>())
-                            it.venueLineArray = mutableListOf()
-                        }
-                        else if (it.venueLineArray is Map<*, *>) {
-                            val lineArrayMap = venueSnapshot.child("venueLineArray").value as Map<*, *>
-                            it.venueLineArray = lineArrayMap.values.mapNotNull { lineArrayObj ->
-                                Gson().fromJson(Gson().toJson(lineArrayObj), LineArray::class.java)
-                            }.toMutableList()
+                        if (venueMap["venueLineArray"] is HashMap<*, *>) {
+                            val lineArrayMap = venueMap["venueLineArray"] as HashMap<*, *>
+                            val lineArrays = hashMapOf<String, LineArray>()
+                            for ((key, value) in lineArrayMap) {
+                                val lineArray = Gson().fromJson(
+                                    Gson().toJson(value),
+                                    LineArray::class.java
+                                )
+                                lineArrays[key as String] = lineArray
+                            }
+                            venue.venueLineArray = lineArrays
                         }
 
-                        venues.add(it)
+                        venues[venue.id] = venue
                     }
                 }
 
@@ -95,6 +98,7 @@ class VenueActivity : AppCompatActivity() {
             }
         })
     }
+
 
     private fun onVenueClick(venue: Venue) {
         AlertDialog.Builder(this)

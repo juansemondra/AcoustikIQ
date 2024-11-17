@@ -73,6 +73,8 @@ class EditConcertActivity : AppCompatActivity() {
     private fun updateConcertInDatabase() {
         val userConcertRef = database.child(concert.id)
 
+        concert.venues = concert.venues ?: hashMapOf()
+
         userConcertRef.setValue(concert)
             .addOnSuccessListener {
                 Toast.makeText(this, "Concierto actualizado exitosamente", Toast.LENGTH_SHORT).show()

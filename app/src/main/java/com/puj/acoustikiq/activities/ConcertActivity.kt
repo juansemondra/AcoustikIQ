@@ -63,34 +63,32 @@ class ConcertActivity : AppCompatActivity() {
                     concert?.let {
                         it.id = concertSnapshot.key ?: ""
 
-
                         if (concertSnapshot.hasChild("venues")) {
-                            val venuesMap = concertSnapshot.child("venues").value as? Map<*, *>
+                            val venuesMap = concertSnapshot.child("venues").value as? HashMap<*, *>
                             if (venuesMap != null) {
-                                it.venues = venuesMap.mapNotNull { entry ->
-                                    val venueKey = entry.key as? String ?: return@mapNotNull null
-                                    val venueMap = entry.value as? Map<*, *> ?: return@mapNotNull null
+                                val venues = hashMapOf<String, Venue>()
+                                for ((key, value) in venuesMap) {
+                                    val venueMap = value as HashMap<*, *>
+                                    val venue = Gson().fromJson(Gson().toJson(venueMap), Venue::class.java)
+                                    venue.id = key as String
 
-
-                                    val venue = Venue(
-                                        id = venueKey,
-                                        name = venueMap["name"] as? String ?: "",
-                                        temperature = (venueMap["temperature"] as? Double) ?: 0.0,
-                                        position = Gson().fromJson(
-                                            Gson().toJson(venueMap["position"]),
-                                            Position::class.java
-                                        )
-                                    )
-
-                                    if (venueMap["venueLineArray"] is Map<*, *>) {
-                                        val lineArrayMap = venueMap["venueLineArray"] as Map<*, *>
-                                        venue.venueLineArray = lineArrayMap.values.mapNotNull { lineArrayObj ->
-                                            Gson().fromJson(Gson().toJson(lineArrayObj), LineArray::class.java)
-                                        }.toMutableList()
+                                    // Manejar los LineArrays dentro de cada Venue
+                                    if (venueMap["venueLineArray"] is HashMap<*, *>) {
+                                        val lineArrayMap = venueMap["venueLineArray"] as HashMap<*, *>
+                                        val lineArrays = hashMapOf<String, LineArray>()
+                                        for ((lineKey, lineValue) in lineArrayMap) {
+                                            val lineArray = Gson().fromJson(
+                                                Gson().toJson(lineValue),
+                                                LineArray::class.java
+                                            )
+                                            lineArrays[lineKey as String] = lineArray
+                                        }
+                                        venue.venueLineArray = lineArrays
                                     }
 
-                                    venue
-                                }.toMutableList()
+                                    venues[key] = venue
+                                }
+                                it.venues = venues
                             }
                         }
 
