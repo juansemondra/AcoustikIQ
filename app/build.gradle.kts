@@ -74,6 +74,10 @@ dependencies {
     implementation(libs.firebase.storage)
     implementation(libs.firebase.ui.storage)
     implementation(libs.firebase.database)
+    implementation(libs.play.services.maps.v1810)
+    implementation(libs.play.services.location.v2101)
+    implementation(libs.android.maps.utils)
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

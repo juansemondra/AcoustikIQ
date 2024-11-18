@@ -13,22 +13,14 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.commit
 import com.google.android.gms.location.*
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.*
 import com.puj.acoustikiq.R
-import com.puj.acoustikiq.adapters.DateTypeAdapter
 import com.puj.acoustikiq.databinding.ActivityRouteBinding
 import com.puj.acoustikiq.fragments.RouteFragment
 import com.puj.acoustikiq.model.Concert
-import com.puj.acoustikiq.util.Alerts
 import com.puj.acoustikiq.services.SharedViewModel
-import java.io.File
-import java.io.FileInputStream
-import java.io.InputStreamReader
-import java.util.Date
+import com.puj.acoustikiq.util.Alerts
 
 class RouteActivity : AppCompatActivity() {
 
@@ -45,6 +37,9 @@ class RouteActivity : AppCompatActivity() {
 
     private val viewModel: SharedViewModel by viewModels()
 
+    private lateinit var database: DatabaseReference
+    private val userId: String by lazy { FirebaseAuth.getInstance().currentUser?.uid.orEmpty() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -54,38 +49,18 @@ class RouteActivity : AppCompatActivity() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        database = FirebaseDatabase.getInstance().getReference("concerts/users/$userId")
+
         setupLocation()
 
-        when {
-            ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                startLocationUpdates()
-            }
-
-            shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) -> {
-                alerts.indefiniteSnackbar(
-                    binding.root,
-                    "El permiso de Localización es necesario para usar esta actividad."
-                )
-            }
-
-            else -> {
-                requestPermissions(
-                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                    PERM_LOCATION_CODE
-                )
-            }
-        }
-
         if (checkLocationPermission()) {
+            startLocationUpdates()
             loadMapsFragment()
         } else {
             requestLocationPermission()
         }
 
-        val concerts = loadConcerts()
-        viewModel.concerts.value = concerts
+        loadConcertsFromFirebase()
     }
 
     private fun checkLocationPermission(): Boolean {
@@ -111,43 +86,24 @@ class RouteActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadConcerts(): List<Concert> {
-        val concertsFile = File(filesDir, "concerts.json")
-
-        if (!concertsFile.exists()) {
-            throw Exception("El archivo concerts.json no existe en la memoria local.")
-        }
-
-        val inputStream = FileInputStream(concertsFile)
-        val reader = InputStreamReader(inputStream)
-
-        val gson = GsonBuilder()
-            .registerTypeAdapter(Date::class.java, DateTypeAdapter())
-            .create()
-
-        val concertType = object : TypeToken<List<Concert>>() {}.type
-
-        return gson.fromJson(reader, concertType)
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            PERM_LOCATION_CODE -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    startLocationUpdates()
-                } else {
-                    alerts.shortSimpleSnackbar(
-                        binding.root,
-                        "Me acaban de negar los permisos de Localización 😭"
-                    )
+    private fun loadConcertsFromFirebase() {
+        database.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val concertsMap = hashMapOf<String, Concert>()
+                for (concertSnapshot in snapshot.children) {
+                    val concert = concertSnapshot.getValue(Concert::class.java)
+                    concert?.let {
+                        it.id = concertSnapshot.key.orEmpty()
+                        concertsMap[it.id] = it
+                    }
                 }
+                viewModel.concerts.value = concertsMap
             }
-        }
+
+            override fun onCancelled(error: DatabaseError) {
+                alerts.shortToast("Error al cargar conciertos: ${error.message}")
+            }
+        })
     }
 
     private fun setupLocation() {
@@ -161,10 +117,6 @@ class RouteActivity : AppCompatActivity() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.locations.forEach { location ->
-                    Log.i(TAG, "onLocationResult: $location")
-
-                    binding.animationBeer.speed = (location.speed * 3.6F) / 8F
-
                     val fragment = supportFragmentManager.findFragmentById(R.id.googleMapsFragment) as RouteFragment
                     fragment.movePerson(location)
                 }
@@ -173,26 +125,15 @@ class RouteActivity : AppCompatActivity() {
     }
 
     private fun startLocationUpdates() {
-        if (ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
+        if (checkLocationPermission()) {
             fusedLocationClient.requestLocationUpdates(
                 locationRequest, locationCallback, Looper.getMainLooper()
             )
-            binding.animationBeer.resumeAnimation()
-        } else {
-            binding.animationBeer.pauseAnimation()
         }
     }
 
     override fun onPause() {
         super.onPause()
-        stopLocationUpdates()
-    }
-
-    private fun stopLocationUpdates() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
-        binding.animationBeer.pauseAnimation()
     }
 }

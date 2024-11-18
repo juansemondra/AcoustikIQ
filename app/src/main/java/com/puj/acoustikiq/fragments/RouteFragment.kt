@@ -1,16 +1,6 @@
 package com.puj.acoustikiq.fragments
 
-import android.content.Context
-import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.location.Location
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -26,37 +16,37 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import com.google.maps.android.PolyUtil
 import com.puj.acoustikiq.R
 import com.puj.acoustikiq.databinding.FragmentRouteBinding
 import com.puj.acoustikiq.model.Concert
-import com.puj.acoustikiq.util.Alerts
 import com.puj.acoustikiq.services.SharedViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
-class RouteFragment : Fragment(), SensorEventListener {
-    private lateinit var binding: FragmentRouteBinding
-    private lateinit var alerts: Alerts
-    lateinit var gMap: GoogleMap
-    private lateinit var sensorManager: SensorManager
-    private lateinit var lightSensor: Sensor
-    private var zoomLevel = 15f
-    private lateinit var mapMarker: Marker
-    private lateinit var polylineOptions: PolylineOptions
-    private var selectedConcertLocation: LatLng? = null
-    private var position: LatLng = LatLng(-34.0, 151.0)
+class RouteFragment : Fragment() {
 
+    private lateinit var binding: FragmentRouteBinding
+    private lateinit var gMap: GoogleMap
+    private lateinit var mapMarker: Marker
+    private var position: LatLng = LatLng(-34.0, 151.0) // Default position
     private val viewModel: SharedViewModel by activityViewModels()
+
+    private var selectedConcertLocation: LatLng? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentRouteBinding.inflate(inflater, container, false)
-        polylineOptions = PolylineOptions().width(5f).color(Color.RED).geodesic(true)
 
-        viewModel.concerts.observe(viewLifecycleOwner, Observer { concerts ->
-            setupConcertSpinner(concerts)
+        viewModel.concerts.observe(viewLifecycleOwner, Observer { concertsMap ->
+            setupConcertSpinner(concertsMap)
         })
 
         val callback = OnMapReadyCallback { googleMap ->
@@ -66,30 +56,27 @@ class RouteFragment : Fragment(), SensorEventListener {
 
             mapMarker = gMap.addMarker(
                 MarkerOptions().position(position).title("Ubicación Inicial")
-                    .icon(context?.let { bitmapDescriptorFromVector(it, R.drawable.person_24px) })
             )!!
 
-            gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel))
+            gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 15f))
         }
 
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(callback)
 
-        sensorManager = context?.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)!!
-
         binding.navigateButton.setOnClickListener {
             selectedConcertLocation?.let { destination ->
-                openGoogleMapsForDirections(position, destination)
+                drawRoute(position, destination)
             }
         }
 
         return binding.root
     }
 
-    private fun setupConcertSpinner(concerts: List<Concert>) {
+    private fun setupConcertSpinner(concertsMap: HashMap<String, Concert>) {
         val dateFormat = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
-        val concertNames = concerts.map { "${it.name} - ${dateFormat.format(it.date)}" }
+        val concertEntries = concertsMap.entries.toList()
+        val concertNames = concertEntries.map { "${it.value.name} - ${dateFormat.format(it.value.date)}" }
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, concertNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
@@ -97,9 +84,8 @@ class RouteFragment : Fragment(), SensorEventListener {
 
         binding.concertSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                val selectedConcert = concerts[position]
-                selectedConcertLocation =
-                    selectedConcert.location?.let { LatLng(it.latitude, selectedConcert.location!!.longitude) }
+                val selectedConcert = concertEntries[position].value
+                selectedConcertLocation = LatLng(selectedConcert.location.latitude, selectedConcert.location.longitude)
                 moveCameraToConcert(selectedConcertLocation!!)
             }
 
@@ -107,74 +93,43 @@ class RouteFragment : Fragment(), SensorEventListener {
         }
     }
 
-    private fun openGoogleMapsForDirections(start: LatLng, destination: LatLng) {
-        val uri = Uri.parse("https://www.google.com/maps/dir/?api=1&origin=${start.latitude},${start.longitude}&destination=${destination.latitude},${destination.longitude}&travelmode=driving")
-        val intent = Intent(Intent.ACTION_VIEW, uri)
-        intent.setPackage("com.google.android.apps.maps")
-        if (intent.resolveActivity(requireActivity().packageManager) != null) {
-            startActivity(intent)
-        } else {
-            alerts.shortToast("Google Maps no está instalado.")
-        }
-    }
-
     private fun moveCameraToConcert(location: LatLng) {
         mapMarker.position = location
-        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location, zoomLevel))
+        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 15f))
     }
 
     fun movePerson(location: Location) {
         position = LatLng(location.latitude, location.longitude)
         mapMarker.position = position
-        mapMarker.zIndex = 10.0f
-
-        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel))
-
-        drawPolyline(location)
+        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position, 15f))
     }
 
-    fun drawPolyline(location: Location) {
-        val latLng = LatLng(location.latitude, location.longitude)
-        polylineOptions.add(latLng)
-        gMap.addPolyline(polylineOptions)
-    }
+    private fun drawRoute(start: LatLng, destination: LatLng) {
+        val apiKey = getString(R.string.google_maps_key)
+        val url = "https://maps.googleapis.com/maps/api/directions/json?" +
+                "origin=${start.latitude},${start.longitude}" +
+                "&destination=${destination.latitude},${destination.longitude}" +
+                "&key=$apiKey"
 
-    private fun bitmapDescriptorFromVector(context: Context, vectorResId: Int): BitmapDescriptor? {
-        val vectorDrawable = ContextCompat.getDrawable(context, vectorResId)
-        vectorDrawable?.setBounds(0, 0, vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
-        val bitmap = Bitmap.createBitmap(
-            vectorDrawable!!.intrinsicWidth,
-            vectorDrawable.intrinsicHeight,
-            Bitmap.Config.ARGB_8888
-        )
-        val canvas = Canvas(bitmap)
-        vectorDrawable.draw(canvas)
-        return BitmapDescriptorFactory.fromBitmap(bitmap)
-    }
+        CoroutineScope(Dispatchers.IO).launch {
+            val response = URL(url).readText()
+            val jsonObject = JSONObject(response)
+            val routes = jsonObject.getJSONArray("routes")
 
-    override fun onResume() {
-        super.onResume()
-        sensorManager.registerListener(this, lightSensor, SensorManager.SENSOR_DELAY_NORMAL)
-    }
+            if (routes.length() > 0) {
+                val overviewPolyline = routes.getJSONObject(0).getJSONObject("overview_polyline")
+                val points = overviewPolyline.getString("points")
+                val decodedPath = PolyUtil.decode(points)
 
-    override fun onPause() {
-        super.onPause()
-        sensorManager.unregisterListener(this)
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (this::gMap.isInitialized) {
-            if (event!!.values[0] > 80) {
-                gMap.setMapStyle(
-                    context?.let { MapStyleOptions.loadRawResourceStyle(it, R.raw.map_day) }
-                )
-            } else {
-                gMap.setMapStyle(
-                    context?.let { MapStyleOptions.loadRawResourceStyle(it, R.raw.map_night) }
-                )
+                CoroutineScope(Dispatchers.Main).launch {
+                    gMap.addPolyline(
+                        PolylineOptions()
+                            .addAll(decodedPath)
+                            .color(ContextCompat.getColor(requireContext(), R.color.routeColor))
+                            .width(10f)
+                    )
+                }
             }
         }
     }
-
-    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {}
 }

@@ -5,5 +5,5 @@ import androidx.lifecycle.ViewModel
 import com.puj.acoustikiq.model.Concert
 
 class SharedViewModel : ViewModel() {
-    val concerts: MutableLiveData<List<Concert>> = MutableLiveData()
+    val concerts: MutableLiveData<HashMap<String, Concert>> = MutableLiveData()
 }

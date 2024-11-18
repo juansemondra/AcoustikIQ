@@ -38,5 +38,6 @@
     <string name="profile_name">Nombre</string>
     <string name="profile_phone">Telefono</string>
     <string name="profile_update">Actualizar</string>
+    <string name="google_maps_key">AIzaSyB22toYWo96YegAQ5F39rmWH-Av_Xzl1gY</string>
 
 </resources>
