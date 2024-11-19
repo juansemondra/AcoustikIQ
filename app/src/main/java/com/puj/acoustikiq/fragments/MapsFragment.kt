@@ -1,5 +1,6 @@
 package com.puj.acoustikiq.fragments
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -159,11 +160,12 @@ class MapsFragment : Fragment() {
             MarkerOptions()
                 .position(position)
                 .title(lineArray.type)
-                .icon(bitmapDescriptorFromVector(requireContext(), R.drawable.military_tech_24px))
+                .icon(bitmapDescriptorFromVector(requireContext(), R.drawable.ic_line_array))
         )
         marker?.tag = lineArray
         markers.add(marker!!)
     }
+    @SuppressLint("PotentialBehaviorOverride")
     private fun setupMapListeners() {
         gMap.setOnMarkerClickListener { marker ->
             val lineArray = marker.tag as? LineArray
